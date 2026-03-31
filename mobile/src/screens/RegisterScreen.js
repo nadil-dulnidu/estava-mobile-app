@@ -1,3 +1,4 @@
+// Screen component for user-facing workflow in the real-estate mobile app.
 import React, { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
 import { useAuth } from "../context/AuthContext";

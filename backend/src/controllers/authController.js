@@ -1,3 +1,4 @@
+// Controller layer: validates HTTP intent and delegates business logic to services.
 const catchAsync = require("../utils/catchAsync");
 const { successResponse } = require("../utils/apiResponse");
 const { validateRegisterInput, validateLoginInput } = require("../validators/authValidator");

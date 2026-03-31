@@ -1,5 +1,7 @@
+// Service layer: encapsulates business rules and database operations.
 const Property = require("../models/Property");
 const AppError = require("../utils/AppError");
+const { deleteManyLocalFilesByUrls } = require("../utils/fileStorage");
 
 const mapNumericFields = (payload) => {
   const data = { ...payload };
@@ -89,10 +91,29 @@ const updateProperty = async (id, payload, imageUrls, currentUser) => {
   }
 
   const data = mapNumericFields(payload);
+
+  const removeImageUrls = Array.isArray(data.removeImageUrls) ? data.removeImageUrls : [];
+  const replaceImages = data.replaceImages === true;
+
+  delete data.removeImageUrls;
+  delete data.replaceImages;
+
   Object.assign(property, data);
 
+  if (removeImageUrls.length > 0) {
+    const removableSet = new Set(removeImageUrls);
+    const existingRemovals = property.imageUrls.filter((url) => removableSet.has(url));
+    await deleteManyLocalFilesByUrls(existingRemovals);
+    property.imageUrls = property.imageUrls.filter((url) => !removableSet.has(url));
+  }
+
   if (imageUrls && imageUrls.length > 0) {
-    property.imageUrls = [...property.imageUrls, ...imageUrls];
+    if (replaceImages) {
+      await deleteManyLocalFilesByUrls(property.imageUrls);
+      property.imageUrls = [...imageUrls];
+    } else {
+      property.imageUrls = [...property.imageUrls, ...imageUrls];
+    }
   }
 
   await property.save();
@@ -112,6 +133,7 @@ const deleteProperty = async (id, currentUser) => {
     throw new AppError("You can only delete your own properties", 403);
   }
 
+  await deleteManyLocalFilesByUrls(property.imageUrls);
   await Property.findByIdAndDelete(id);
 };
 

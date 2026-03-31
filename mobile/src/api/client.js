@@ -1,3 +1,4 @@
+// API client helpers for backend communication and module-specific requests.
 import axios from "axios";
 
 // Keep production ready by reading the hosted API from env.

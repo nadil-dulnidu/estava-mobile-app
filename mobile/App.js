@@ -1,3 +1,4 @@
+// Mobile app entry point wrapping navigation with global auth state provider.
 import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";

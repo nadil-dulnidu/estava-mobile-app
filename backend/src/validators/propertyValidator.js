@@ -1,3 +1,4 @@
+// Request payload validation for assignment-required data integrity on APIs.
 const AppError = require("../utils/AppError");
 
 const allowedTypes = ["house", "apartment", "land", "villa", "commercial"];
@@ -10,6 +11,20 @@ const coerceFeatureList = (features) => {
     return features.split(",").map((item) => item.trim()).filter(Boolean);
   }
   throw new AppError("Features must be an array or comma-separated string", 400);
+};
+
+const coerceStringList = (value) => {
+  if (value === undefined) return undefined;
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean);
+  }
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  throw new AppError("Value must be an array or comma-separated string", 400);
 };
 
 const validateCreatePropertyInput = (payload) => {
@@ -58,9 +73,24 @@ const validateUpdatePropertyInput = (payload, options = {}) => {
   if (payload.areaSize !== undefined && Number(payload.areaSize) < 0) {
     throw new AppError("Area size cannot be negative", 400);
   }
+
+  if (payload.replaceImages !== undefined && typeof payload.replaceImages !== "boolean") {
+    throw new AppError("replaceImages must be a boolean", 400);
+  }
+
+  if (payload.removeImageUrls !== undefined) {
+    if (!Array.isArray(payload.removeImageUrls)) {
+      throw new AppError("removeImageUrls must be an array", 400);
+    }
+    const invalidItem = payload.removeImageUrls.find((item) => typeof item !== "string");
+    if (invalidItem !== undefined) {
+      throw new AppError("removeImageUrls entries must be strings", 400);
+    }
+  }
 };
 
 module.exports = {
+  coerceStringList,
   coerceFeatureList,
   validateCreatePropertyInput,
   validateUpdatePropertyInput

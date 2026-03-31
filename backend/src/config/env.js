@@ -1,3 +1,4 @@
+// Environment loader and required-secret guard for deployment-safe configuration.
 const dotenv = require("dotenv");
 
 dotenv.config();

@@ -1,3 +1,4 @@
+// Express app setup with security middleware, routing, and centralized error handling.
 const express = require("express");
 const path = require("path");
 const helmet = require("helmet");

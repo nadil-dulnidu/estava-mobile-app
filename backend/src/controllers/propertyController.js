@@ -1,6 +1,8 @@
+// Controller layer: validates HTTP intent and delegates business logic to services.
 const catchAsync = require("../utils/catchAsync");
 const { successResponse } = require("../utils/apiResponse");
 const {
+  coerceStringList,
   coerceFeatureList,
   validateCreatePropertyInput,
   validateUpdatePropertyInput
@@ -24,6 +26,20 @@ const normalizePayload = (payload) => {
   if (features !== undefined) {
     data.features = features;
   }
+
+  const removeImageUrls = coerceStringList(data.removeImageUrls);
+  if (removeImageUrls !== undefined) {
+    data.removeImageUrls = removeImageUrls;
+  }
+
+  if (data.replaceImages !== undefined) {
+    if (typeof data.replaceImages === "string") {
+      data.replaceImages = data.replaceImages.toLowerCase() === "true";
+    } else {
+      data.replaceImages = Boolean(data.replaceImages);
+    }
+  }
+
   return data;
 };
 

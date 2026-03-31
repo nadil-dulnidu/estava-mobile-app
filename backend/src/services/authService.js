@@ -1,3 +1,4 @@
+// Service layer: encapsulates business rules and database operations.
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");

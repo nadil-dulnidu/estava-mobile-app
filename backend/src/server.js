@@ -1,3 +1,4 @@
+// Server entry point: connects database first, then starts the API listener.
 const app = require("./app");
 const env = require("./config/env");
 const connectDB = require("./config/db");

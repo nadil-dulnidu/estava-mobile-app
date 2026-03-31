@@ -1,8 +1,9 @@
+// Screen component for user-facing workflow in the real-estate mobile app.
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { useAuth } from "../context/AuthContext";
 
-export default function HomeScreen() {
+export default function HomeScreen({ navigation }) {
   const { user, logout } = useAuth();
 
   return (
@@ -10,6 +11,9 @@ export default function HomeScreen() {
       <Text style={styles.title}>Estava</Text>
       <Text style={styles.subtitle}>You are logged in as {user?.fullName}</Text>
       <Text style={styles.caption}>Role: {user?.role}</Text>
+      <Pressable style={styles.primaryButton} onPress={() => navigation.navigate("PropertyList")}>
+        <Text style={styles.primaryButtonText}>Browse Properties</Text>
+      </Pressable>
       <Pressable style={styles.button} onPress={logout}>
         <Text style={styles.buttonText}>Logout</Text>
       </Pressable>
@@ -39,9 +43,20 @@ const styles = StyleSheet.create({
     marginTop: 6,
     color: "#4b5563"
   },
-  button: {
+  primaryButton: {
     marginTop: 24,
     backgroundColor: "#1d4ed8",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20
+  },
+  primaryButtonText: {
+    color: "#ffffff",
+    fontWeight: "700"
+  },
+  button: {
+    marginTop: 12,
+    backgroundColor: "#4b5563",
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 20

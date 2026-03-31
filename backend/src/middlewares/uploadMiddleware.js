@@ -1,3 +1,4 @@
+// Multer configuration for validated image uploads required by property management.
 const fs = require("fs");
 const path = require("path");
 const multer = require("multer");
