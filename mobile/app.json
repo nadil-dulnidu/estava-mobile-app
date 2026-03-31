@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "Estava",
+    "slug": "estava-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "android": {
+      "package": "com.estava.mobile"
+    },
+    "ios": {
+      "bundleIdentifier": "com.estava.mobile"
+    }
+  }
+}
