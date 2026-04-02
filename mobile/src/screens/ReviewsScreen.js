@@ -8,20 +8,26 @@ import {
   StyleSheet,
   ActivityIndicator,
   Modal,
-  TextInput
+  TextInput,
+  ScrollView
 } from "react-native";
 import { reviewApi } from "../api/reviewApi";
+import { propertyApi } from "../api/propertyApi";
 
 export default function ReviewsScreen() {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
+  const [propertySelectMode, setPropertySelectMode] = useState(false);
+  const [properties, setProperties] = useState([]);
+  const [selectedProperty, setSelectedProperty] = useState(null);
   const [rating, setRating] = useState("5");
   const [comment, setComment] = useState("");
 
   useEffect(() => {
     loadReviews();
+    loadProperties();
   }, []);
 
   const loadReviews = async () => {
@@ -37,23 +43,39 @@ export default function ReviewsScreen() {
     }
   };
 
+  const loadProperties = async () => {
+    try {
+      const res = await propertyApi.listProperties();
+      setProperties(res.data || []);
+    } catch (err) {
+      console.log("Failed to load properties:", err.message);
+    }
+  };
+
   const onSubmitReview = async () => {
+    if (!selectedProperty) {
+      setError("Please select a property");
+      return;
+    }
     if (!comment.trim()) {
       setError("Comment cannot be empty");
       return;
     }
     try {
-      // Note: property/agent selection would be done before opening this modal in production
       await reviewApi.submitReview({
+        propertyId: selectedProperty._id,
         rating: parseInt(rating),
         comment
       });
       setModalVisible(false);
+      setPropertySelectMode(false);
       setRating("5");
       setComment("");
+      setSelectedProperty(null);
+      setError("");
       loadReviews();
     } catch (err) {
-      setError("Failed to submit review");
+      setError(err.response?.data?.message || "Failed to submit review");
     }
   };
 
@@ -82,7 +104,7 @@ export default function ReviewsScreen() {
               </Text>
               <Text style={styles.stars}>{renderStars(item.rating)}</Text>
               <Text style={styles.comment}>{item.comment}</Text>
-              <Text style={styles.date}>{new Date(item.reviewDate).toLocaleDateString()}</Text>
+              <Text style={styles.date}>{new Date(item.createdAt).toLocaleDateString()}</Text>
             </View>
           )}
         />
@@ -91,34 +113,70 @@ export default function ReviewsScreen() {
       <Modal visible={modalVisible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Add Review</Text>
-            <View style={styles.ratingContainer}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Pressable
-                  key={star}
-                  onPress={() => setRating(star.toString())}
-                  style={[styles.starButton, star <= parseInt(rating) && styles.starSelected]}
-                >
-                  <Text style={styles.starText}>⭐</Text>
-                </Pressable>
-              ))}
-            </View>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Write your comment..."
-              multiline
-              numberOfLines={4}
-              value={comment}
-              onChangeText={setComment}
-            />
-            <View style={styles.modalButtons}>
-              <Pressable style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
-                <Text style={styles.cancelText}>Cancel</Text>
-              </Pressable>
-              <Pressable style={styles.submitBtn} onPress={onSubmitReview}>
-                <Text style={styles.submitText}>Submit</Text>
-              </Pressable>
-            </View>
+            {!propertySelectMode ? (
+              <>
+                <Text style={styles.modalTitle}>Select Property</Text>
+                <ScrollView style={styles.propertyList}>
+                  {properties.map((prop) => (
+                    <Pressable
+                      key={prop._id}
+                      style={[
+                        styles.propertyItem,
+                        selectedProperty?._id === prop._id && styles.propertyItemSelected
+                      ]}
+                      onPress={() => setSelectedProperty(prop)}
+                    >
+                      <Text style={styles.propertyTitle}>{prop.title}</Text>
+                      <Text style={styles.propertyPrice}>LKR {Number(prop.price || 0).toLocaleString()}</Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+                <View style={styles.modalButtons}>
+                  <Pressable style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
+                    <Text style={styles.cancelText}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.submitBtn, !selectedProperty && styles.submitBtnDisabled]}
+                    onPress={() => setPropertySelectMode(true)}
+                    disabled={!selectedProperty}
+                  >
+                    <Text style={styles.submitText}>Next</Text>
+                  </Pressable>
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={styles.modalTitle}>Review: {selectedProperty?.title}</Text>
+                {!!error && <Text style={styles.error}>{error}</Text>}
+                <View style={styles.ratingContainer}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Pressable
+                      key={star}
+                      onPress={() => setRating(star.toString())}
+                      style={[styles.starButton, star <= parseInt(rating) && styles.starSelected]}
+                    >
+                      <Text style={styles.starText}>⭐</Text>
+                    </Pressable>
+                  ))}
+                </View>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Write your comment..."
+                  multiline
+                  numberOfLines={4}
+                  value={comment}
+                  onChangeText={setComment}
+                />
+                <View style={styles.modalButtons}>
+                  <Pressable style={styles.cancelBtn} onPress={() => setPropertySelectMode(false)}>
+                    <Text style={styles.cancelText}>Back</Text>
+                  </Pressable>
+                  <Pressable style={styles.submitBtn} onPress={onSubmitReview}>
+                    <Text style={styles.submitText}>Submit</Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
           </View>
         </View>
       </Modal>
@@ -150,8 +208,13 @@ const styles = StyleSheet.create({
   comment: { fontSize: 14, color: "#374151", marginTop: 6 },
   date: { fontSize: 12, color: "#9ca3af", marginTop: 6 },
   modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.3)" },
-  modalContent: { backgroundColor: "#fff", padding: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16 },
+  modalContent: { backgroundColor: "#fff", padding: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16, maxHeight: "90%" },
   modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12 },
+  propertyList: { maxHeight: 300, marginBottom: 12 },
+  propertyItem: { padding: 12, borderWidth: 1, borderColor: "#d1d5db", borderRadius: 8, marginBottom: 8 },
+  propertyItemSelected: { backgroundColor: "#dbeafe", borderColor: "#1d4ed8" },
+  propertyTitle: { fontSize: 14, fontWeight: "600" },
+  propertyPrice: { fontSize: 12, color: "#6b7280", marginTop: 4 },
   ratingContainer: { flexDirection: "row", justifyContent: "space-around", marginBottom: 12 },
   starButton: { padding: 8 },
   starSelected: { transform: [{ scale: 1.2 }] },
@@ -161,5 +224,6 @@ const styles = StyleSheet.create({
   cancelBtn: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, backgroundColor: "#e5e7eb" },
   cancelText: { color: "#374151", fontWeight: "600" },
   submitBtn: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, backgroundColor: "#1d4ed8" },
+  submitBtnDisabled: { opacity: 0.5 },
   submitText: { color: "#fff", fontWeight: "600" }
 });
