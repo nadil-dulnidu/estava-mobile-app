@@ -1,3 +1,4 @@
+// MongoDB connection bootstrap using external Atlas URI from environment variables.
 const mongoose = require("mongoose");
 const env = require("./env");
 

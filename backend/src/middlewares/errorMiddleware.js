@@ -1,3 +1,4 @@
+// Centralized API error handlers for consistent status codes and response format.
 const AppError = require("../utils/AppError");
 
 const notFound = (req, _res, next) => {

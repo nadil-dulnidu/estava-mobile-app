@@ -1,3 +1,4 @@
+// Operational error helper used to standardize handled API failures.
 class AppError extends Error {
   constructor(message, statusCode) {
     super(message);

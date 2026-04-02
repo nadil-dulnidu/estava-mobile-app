@@ -1,3 +1,4 @@
+// Data model for a core assignment entity stored in MongoDB Atlas.
 const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(

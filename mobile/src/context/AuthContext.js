@@ -1,3 +1,4 @@
+// Global auth state management for login, registration, and session handling.
 import React, { createContext, useContext, useMemo, useState } from "react";
 import apiClient, { setAuthToken } from "../api/client";
 

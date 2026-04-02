@@ -1,3 +1,4 @@
+// Request payload validation for assignment-required data integrity on APIs.
 const AppError = require("../utils/AppError");
 
 const isEmail = (value) => /\S+@\S+\.\S+/.test(value);

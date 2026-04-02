@@ -1,3 +1,4 @@
+// Auth and role middleware to enforce JWT-protected, role-aware routes.
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const AppError = require("../utils/AppError");
