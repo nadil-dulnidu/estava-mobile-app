@@ -116,23 +116,30 @@ export default function ReviewsScreen() {
             {!propertySelectMode ? (
               <>
                 <Text style={styles.modalTitle}>Select Property</Text>
-                <ScrollView style={styles.propertyList}>
-                  {properties.map((prop) => (
-                    <Pressable
-                      key={prop._id}
-                      style={[
-                        styles.propertyItem,
-                        selectedProperty?._id === prop._id && styles.propertyItemSelected
-                      ]}
-                      onPress={() => setSelectedProperty(prop)}
-                    >
-                      <Text style={styles.propertyTitle}>{prop.title}</Text>
-                      <Text style={styles.propertyPrice}>LKR {Number(prop.price || 0).toLocaleString()}</Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
+                {properties.length === 0 ? (
+                  <Text style={styles.emptyText}>No properties available</Text>
+                ) : (
+                  <ScrollView style={styles.propertyList} nestedScrollEnabled={true}>
+                    {properties.map((prop) => (
+                      <Pressable
+                        key={prop._id}
+                        style={[
+                          styles.propertyItem,
+                          selectedProperty?._id === prop._id && styles.propertyItemSelected
+                        ]}
+                        onPress={() => setSelectedProperty(prop)}
+                      >
+                        <Text style={styles.propertyTitle}>{prop.title}</Text>
+                        <Text style={styles.propertyPrice}>LKR {Number(prop.price || 0).toLocaleString()}</Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                )}
                 <View style={styles.modalButtons}>
-                  <Pressable style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
+                  <Pressable style={styles.cancelBtn} onPress={() => {
+                    setModalVisible(false);
+                    setSelectedProperty(null);
+                  }}>
                     <Text style={styles.cancelText}>Cancel</Text>
                   </Pressable>
                   <Pressable
@@ -208,11 +215,11 @@ const styles = StyleSheet.create({
   comment: { fontSize: 14, color: "#374151", marginTop: 6 },
   date: { fontSize: 12, color: "#9ca3af", marginTop: 6 },
   modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.3)" },
-  modalContent: { backgroundColor: "#fff", padding: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16, maxHeight: "90%" },
+  modalContent: { backgroundColor: "#fff", padding: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16, maxHeight: "85%" },
   modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12 },
-  propertyList: { maxHeight: 300, marginBottom: 12 },
-  propertyItem: { padding: 12, borderWidth: 1, borderColor: "#d1d5db", borderRadius: 8, marginBottom: 8 },
-  propertyItemSelected: { backgroundColor: "#dbeafe", borderColor: "#1d4ed8" },
+  propertyList: { height: 250, marginBottom: 12, borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 8 },
+  propertyItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: "#e5e7eb" },
+  propertyItemSelected: { backgroundColor: "#dbeafe", borderBottomColor: "#1d4ed8" },
   propertyTitle: { fontSize: 14, fontWeight: "600" },
   propertyPrice: { fontSize: 12, color: "#6b7280", marginTop: 4 },
   ratingContainer: { flexDirection: "row", justifyContent: "space-around", marginBottom: 12 },
