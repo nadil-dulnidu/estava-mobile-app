@@ -39,6 +39,27 @@ const listPropertyReviews = async (propertyId) => {
   return { reviews, avgRating, total };
 };
 
+const listUserReviews = async (userId) => {
+  const reviews = await Review.find({ userId })
+    .populate("propertyId", "title")
+    .sort({ createdAt: -1 });
+
+  return reviews;
+};
+
+const listAgentReviews = async (agentId) => {
+  const reviews = await Review.find({ receivedBy: agentId })
+    .populate("userId", "fullName")
+    .sort({ createdAt: -1 });
+
+  const total = reviews.length;
+  const avgRating = total
+    ? Number((reviews.reduce((sum, item) => sum + item.rating, 0) / total).toFixed(2))
+    : 0;
+
+  return { reviews, avgRating, total };
+};
+
 const updateReview = async (reviewId, payload, user) => {
   const review = await Review.findById(reviewId);
   if (!review) {
@@ -78,6 +99,8 @@ const deleteReview = async (reviewId, user) => {
 module.exports = {
   createReview,
   listPropertyReviews,
+  listUserReviews,
+  listAgentReviews,
   updateReview,
   deleteReview
 };

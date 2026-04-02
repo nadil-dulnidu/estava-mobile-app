@@ -8,6 +8,8 @@ const {
 const {
   createReview,
   listPropertyReviews,
+  listUserReviews,
+  listAgentReviews,
   updateReview,
   deleteReview
 } = require("../services/reviewService");
@@ -21,6 +23,16 @@ const create = catchAsync(async (req, res) => {
 const listByProperty = catchAsync(async (req, res) => {
   const data = await listPropertyReviews(req.params.propertyId);
   return successResponse(res, data, "Reviews fetched successfully", 200);
+});
+
+const listByUser = catchAsync(async (req, res) => {
+  const reviews = await listUserReviews(req.user._id);
+  return successResponse(res, reviews, "User reviews fetched successfully", 200);
+});
+
+const listByAgent = catchAsync(async (req, res) => {
+  const data = await listAgentReviews(req.params.agentId);
+  return successResponse(res, data, "Agent reviews fetched successfully", 200);
 });
 
 const update = catchAsync(async (req, res) => {
@@ -37,6 +49,8 @@ const remove = catchAsync(async (req, res) => {
 module.exports = {
   create,
   listByProperty,
+  listByUser,
+  listByAgent,
   update,
   remove
 };
