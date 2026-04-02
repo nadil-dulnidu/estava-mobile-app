@@ -1,0 +1,8 @@
+{
+  "root": "backend",
+  "build": {
+    "builder": "nixpacks",
+    "buildCommand": "npm install"
+  },
+  "start": "node src/server.js"
+}
