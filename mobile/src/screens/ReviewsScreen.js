@@ -12,7 +12,7 @@ import {
   ScrollView
 } from "react-native";
 import { reviewApi } from "../api/reviewApi";
-import { propertyApi } from "../api/propertyApi";
+import { getProperties } from "../api/propertyApi";
 
 export default function ReviewsScreen() {
   const [reviews, setReviews] = useState([]);
@@ -45,10 +45,11 @@ export default function ReviewsScreen() {
 
   const loadProperties = async () => {
     try {
-      const res = await propertyApi.listProperties();
-      setProperties(res.data || []);
+      const result = await getProperties();
+      setProperties(result?.items || []);
     } catch (err) {
       console.log("Failed to load properties:", err.message);
+      setProperties([]);
     }
   };
 
