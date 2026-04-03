@@ -5,10 +5,12 @@ const router = express.Router();
 
 router.get("/health", (_req, res) => {
   const dbConnected = Boolean(_req.app.locals.dbConnected);
+  const jwtConfigured = process.env.JWT_SECRET && process.env.JWT_SECRET.length >= 16;
   res.status(200).json({
     success: true,
     message: "API is healthy",
-    dbConnected
+    dbConnected,
+    jwtConfigured
   });
 });
 
