@@ -12,6 +12,22 @@ const { notFound, errorHandler } = require("./middlewares/errorMiddleware");
 
 const app = express();
 
+// Platform health probes often hit '/' or '/healthz'. Keep these lightweight.
+app.get("/", (_req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Estava backend is running"
+  });
+});
+
+app.get("/healthz", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "ok",
+    dbConnected: Boolean(req.app.locals.dbConnected)
+  });
+});
+
 app.use(helmet());
 app.use(
   cors({
