@@ -11,14 +11,17 @@ import {
   TextInput
 } from "react-native";
 import { inquiryApi } from "../api/inquiryApi";
+import { useAuth } from "../context/AuthContext";
 
 export default function InquiriesScreen() {
+  const { user } = useAuth();
   const [inquiries, setInquiries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [activeTab, setActiveTab] = useState("incoming");
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedInquiry, setSelectedInquiry] = useState(null);
-  const [response, setResponse] = useState("");
+  const [responseMessage, setResponseMessage] = useState("");
 
   useEffect(() => {
     loadInquiries();
@@ -38,22 +41,27 @@ export default function InquiriesScreen() {
   };
 
   const onRespond = async () => {
-    if (!response.trim()) {
+    if (!responseMessage.trim()) {
       setError("Response cannot be empty");
       return;
     }
     try {
       await inquiryApi.updateInquiry(selectedInquiry._id, {
-        status: "replied",
-        message: response
+        inquiryStatus: "replied",
+        responseMessage
       });
       setModalVisible(false);
-      setResponse("");
+      setResponseMessage("");
       loadInquiries();
     } catch (err) {
       setError("Failed to respond");
     }
   };
+
+  const currentUserId = user?.id || user?._id;
+  const incoming = inquiries.filter((item) => item.agentId?._id === currentUserId);
+  const outgoing = inquiries.filter((item) => item.senderUserId?._id === currentUserId);
+  const filtered = activeTab === "incoming" ? incoming : outgoing;
 
   if (loading) return <ActivityIndicator style={{ marginTop: 20 }} size="large" />;
 
@@ -61,21 +69,62 @@ export default function InquiriesScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Inquiries</Text>
       {!!error && <Text style={styles.error}>{error}</Text>}
-      {inquiries.length === 0 ? (
+
+      <View style={styles.tabsRow}>
+        <Pressable
+          style={[styles.tabButton, activeTab === "incoming" && styles.tabButtonActive]}
+          onPress={() => setActiveTab("incoming")}
+        >
+          <Text style={[styles.tabText, activeTab === "incoming" && styles.tabTextActive]}>
+            Incoming ({incoming.length})
+          </Text>
+        </Pressable>
+        <Pressable
+          style={[styles.tabButton, activeTab === "outgoing" && styles.tabButtonActive]}
+          onPress={() => setActiveTab("outgoing")}
+        >
+          <Text style={[styles.tabText, activeTab === "outgoing" && styles.tabTextActive]}>
+            Sent ({outgoing.length})
+          </Text>
+        </Pressable>
+      </View>
+
+      {filtered.length === 0 ? (
         <Text style={styles.emptyText}>No inquiries yet</Text>
       ) : (
         <FlatList
-          data={inquiries}
+          data={filtered}
           keyExtractor={(item) => item._id}
           renderItem={({ item }) => (
             <View style={styles.card}>
+              <Text style={styles.property}>{item.propertyId?.title || "Property"}</Text>
               <Text style={styles.subject}>{item.subject}</Text>
               <Text style={styles.message}>{item.message}</Text>
               <Text style={styles.contact}>Contact: {item.contactNumber}</Text>
-              <Text style={[styles.status, { color: item.status === "replied" ? "#059669" : "#d97706" }]}>
-                Status: {item.status}
+              <Text
+                style={[
+                  styles.status,
+                  {
+                    color:
+                      item.inquiryStatus === "replied"
+                        ? "#059669"
+                        : item.inquiryStatus === "closed"
+                          ? "#6b7280"
+                          : "#d97706"
+                  }
+                ]}
+              >
+                Status: {item.inquiryStatus || "pending"}
               </Text>
-              {item.status !== "replied" && (
+
+              {item.responseMessage ? (
+                <View style={styles.responseBox}>
+                  <Text style={styles.responseLabel}>Owner response:</Text>
+                  <Text style={styles.responseText}>{item.responseMessage}</Text>
+                </View>
+              ) : null}
+
+              {activeTab === "incoming" && item.inquiryStatus !== "replied" && (
                 <Pressable
                   style={styles.respondButton}
                   onPress={() => {
@@ -100,8 +149,8 @@ export default function InquiriesScreen() {
               placeholder="Type your response..."
               multiline
               numberOfLines={4}
-              value={response}
-              onChangeText={setResponse}
+              value={responseMessage}
+              onChangeText={setResponseMessage}
             />
             <View style={styles.modalButtons}>
               <Pressable style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
@@ -130,11 +179,33 @@ const styles = StyleSheet.create({
     marginBottom: 12
   },
   subject: { fontSize: 16, fontWeight: "600" },
+  property: { fontSize: 12, color: "#6b7280", marginBottom: 4 },
   message: { fontSize: 14, color: "#374151", marginTop: 6 },
   contact: { fontSize: 12, color: "#6b7280", marginTop: 4 },
   status: { fontSize: 12, fontWeight: "600", marginTop: 4 },
+  tabsRow: { flexDirection: "row", gap: 10, marginBottom: 12 },
+  tabButton: {
+    flex: 1,
+    backgroundColor: "#e5e7eb",
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: "center"
+  },
+  tabButtonActive: { backgroundColor: "#1d4ed8" },
+  tabText: { fontWeight: "600", color: "#374151" },
+  tabTextActive: { color: "#fff" },
   respondButton: { marginTop: 8, paddingVertical: 6, alignItems: "center" },
   respondText: { color: "#1d4ed8", fontWeight: "600" },
+  responseBox: {
+    marginTop: 8,
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: "#eff6ff",
+    borderWidth: 1,
+    borderColor: "#bfdbfe"
+  },
+  responseLabel: { fontSize: 12, fontWeight: "700", color: "#1e40af" },
+  responseText: { marginTop: 4, color: "#1f2937" },
   modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.3)" },
   modalContent: { backgroundColor: "#fff", padding: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16 },
   modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12 },

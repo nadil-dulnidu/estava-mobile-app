@@ -24,7 +24,7 @@ export const appointmentApi = {
 
   // Cancel appointment
   cancelAppointment: async (appointmentId) => {
-    return apiClient.patch(`/appointments/${appointmentId}`, { status: "cancelled" });
+    return apiClient.patch(`/appointments/${appointmentId}`, { appointmentStatus: "cancelled" });
   }
 };
 

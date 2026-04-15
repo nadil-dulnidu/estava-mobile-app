@@ -9,7 +9,8 @@ import {
   ActivityIndicator,
   Modal,
   TextInput,
-  ScrollView
+  ScrollView,
+  Alert
 } from "react-native";
 import { reviewApi } from "../api/reviewApi";
 import { getProperties } from "../api/propertyApi";
@@ -82,6 +83,24 @@ export default function ReviewsScreen() {
 
   const renderStars = (count) => "⭐".repeat(Math.min(count, 5));
 
+  const onDeleteReview = (reviewId) => {
+    Alert.alert("Delete review", "Are you sure you want to delete this review?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await reviewApi.deleteReview(reviewId);
+            loadReviews();
+          } catch (err) {
+            setError(err.response?.data?.message || "Failed to delete review");
+          }
+        }
+      }
+    ]);
+  };
+
   if (loading) return <ActivityIndicator style={{ marginTop: 20 }} size="large" />;
 
   return (
@@ -106,6 +125,9 @@ export default function ReviewsScreen() {
               <Text style={styles.stars}>{renderStars(item.rating)}</Text>
               <Text style={styles.comment}>{item.comment}</Text>
               <Text style={styles.date}>{new Date(item.createdAt).toLocaleDateString()}</Text>
+              <Pressable style={styles.deleteButton} onPress={() => onDeleteReview(item._id)}>
+                <Text style={styles.deleteButtonText}>Delete</Text>
+              </Pressable>
             </View>
           )}
         />
@@ -215,6 +237,8 @@ const styles = StyleSheet.create({
   stars: { fontSize: 16, marginTop: 6 },
   comment: { fontSize: 14, color: "#374151", marginTop: 6 },
   date: { fontSize: 12, color: "#9ca3af", marginTop: 6 },
+  deleteButton: { marginTop: 8, alignSelf: "flex-start" },
+  deleteButtonText: { color: "#b91c1c", fontWeight: "700", fontSize: 12 },
   modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.3)" },
   modalContent: { backgroundColor: "#fff", padding: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16, maxHeight: "85%" },
   modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12 },

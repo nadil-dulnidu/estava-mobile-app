@@ -1,6 +1,7 @@
 // Service layer for inquiry business rules and ownership checks.
 const Inquiry = require("../models/Inquiry");
 const Property = require("../models/Property");
+const Notification = require("../models/Notification");
 const AppError = require("../utils/AppError");
 
 const createInquiry = async (payload, userId) => {
@@ -13,7 +14,7 @@ const createInquiry = async (payload, userId) => {
     throw new AppError("You cannot inquire about your own property", 400);
   }
 
-  return Inquiry.create({
+  const inquiry = await Inquiry.create({
     propertyId: payload.propertyId,
     senderUserId: userId,
     agentId: property.createdBy,
@@ -22,6 +23,17 @@ const createInquiry = async (payload, userId) => {
     contactNumber: payload.contactNumber || "",
     inquiryStatus: "pending"
   });
+
+  // Notify listing owner that a new inquiry arrived.
+  await Notification.create({
+    userId: property.createdBy,
+    title: "New inquiry received",
+    message: "You received an inquiry for your listing.",
+    type: "inquiry",
+    status: "unread"
+  });
+
+  return inquiry;
 };
 
 const listInquiriesForUser = async (user) => {
@@ -58,12 +70,41 @@ const updateInquiry = async (inquiryId, payload, user) => {
     throw new AppError("You do not have permission to update this inquiry", 403);
   }
 
-  if (payload.subject !== undefined) inquiry.subject = payload.subject;
-  if (payload.message !== undefined) inquiry.message = payload.message;
-  if (payload.contactNumber !== undefined) inquiry.contactNumber = payload.contactNumber;
-  if (payload.inquiryStatus !== undefined) inquiry.inquiryStatus = payload.inquiryStatus;
+  const nextStatus = payload.inquiryStatus !== undefined ? payload.inquiryStatus : payload.status;
+
+  if (isOwner && !isAssignedAgent && !isAdmin) {
+    if (nextStatus !== undefined || payload.responseMessage !== undefined) {
+      throw new AppError("Only property owner/manager can respond to inquiries", 403);
+    }
+    if (payload.subject !== undefined) inquiry.subject = payload.subject;
+    if (payload.message !== undefined) inquiry.message = payload.message;
+    if (payload.contactNumber !== undefined) inquiry.contactNumber = payload.contactNumber;
+  }
+
+  if (isAssignedAgent || isAdmin) {
+    if (nextStatus !== undefined) inquiry.inquiryStatus = nextStatus;
+    if (payload.responseMessage !== undefined) {
+      inquiry.responseMessage = payload.responseMessage;
+      inquiry.respondedAt = new Date();
+    }
+
+    if (payload.subject !== undefined) inquiry.subject = payload.subject;
+    if (payload.message !== undefined) inquiry.message = payload.message;
+    if (payload.contactNumber !== undefined) inquiry.contactNumber = payload.contactNumber;
+  }
 
   await inquiry.save();
+
+  if ((isAssignedAgent || isAdmin) && payload.responseMessage !== undefined) {
+    await Notification.create({
+      userId: inquiry.senderUserId,
+      title: "Inquiry response",
+      message: "Your inquiry has received a response from the property owner.",
+      type: "inquiry",
+      status: "unread"
+    });
+  }
+
   return inquiry;
 };
 

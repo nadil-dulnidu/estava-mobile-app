@@ -29,6 +29,8 @@ const validateUpdateInquiryInput = (payload) => {
     throw new AppError("Provide at least one field to update", 400);
   }
 
+  const nextStatus = payload.inquiryStatus !== undefined ? payload.inquiryStatus : payload.status;
+
   if (payload.subject !== undefined && String(payload.subject).trim().length < 3) {
     throw new AppError("Subject must be at least 3 characters", 400);
   }
@@ -41,8 +43,12 @@ const validateUpdateInquiryInput = (payload) => {
     throw new AppError("contactNumber must be 40 characters or less", 400);
   }
 
-  if (payload.inquiryStatus !== undefined && !validStatuses.includes(payload.inquiryStatus)) {
+  if (nextStatus !== undefined && !validStatuses.includes(nextStatus)) {
     throw new AppError("Invalid inquiryStatus", 400);
+  }
+
+  if (payload.responseMessage !== undefined && String(payload.responseMessage).trim().length < 3) {
+    throw new AppError("responseMessage must be at least 3 characters", 400);
   }
 };
 

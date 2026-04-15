@@ -10,8 +10,10 @@ import {
   Pressable,
   Modal,
   TextInput,
-  Alert
+  Alert,
+  Platform
 } from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { getPropertyById } from "../api/propertyApi";
 import { favoriteApi } from "../api/favoriteApi";
 import { inquiryApi } from "../api/inquiryApi";
@@ -32,9 +34,24 @@ export default function PropertyDetailScreen({ route }) {
 
   // Appointment modal state
   const [appointmentModalVisible, setAppointmentModalVisible] = useState(false);
-  const [appointmentDate, setAppointmentDate] = useState("");
-  const [appointmentTime, setAppointmentTime] = useState("");
+  const [appointmentDate, setAppointmentDate] = useState(new Date());
+  const [appointmentTime, setAppointmentTime] = useState(new Date());
   const [appointmentPurpose, setAppointmentPurpose] = useState("");
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
+  const formatDateValue = (value) => {
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, "0");
+    const day = String(value.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatTimeValue = (value) => {
+    const hours = String(value.getHours()).padStart(2, "0");
+    const minutes = String(value.getMinutes()).padStart(2, "0");
+    return `${hours}:${minutes}`;
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -96,20 +113,16 @@ export default function PropertyDetailScreen({ route }) {
   };
 
   const handleBookAppointment = async () => {
-    if (!appointmentDate.trim() || !appointmentTime.trim()) {
-      Alert.alert("Error", "Please enter date and time");
-      return;
-    }
     try {
       await appointmentApi.createAppointment({
         propertyId,
-        date: appointmentDate,
-        time: appointmentTime,
+        date: formatDateValue(appointmentDate),
+        time: formatTimeValue(appointmentTime),
         visitPurpose: appointmentPurpose || "Property viewing"
       });
       setAppointmentModalVisible(false);
-      setAppointmentDate("");
-      setAppointmentTime("");
+      setAppointmentDate(new Date());
+      setAppointmentTime(new Date());
       setAppointmentPurpose("");
       Alert.alert("Success", "Appointment booked successfully");
     } catch (err) {
@@ -236,18 +249,43 @@ export default function PropertyDetailScreen({ route }) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Book Appointment</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Date (YYYY-MM-DD)"
-              value={appointmentDate}
-              onChangeText={setAppointmentDate}
-            />
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Time (HH:MM)"
-              value={appointmentTime}
-              onChangeText={setAppointmentTime}
-            />
+            <Pressable style={styles.pickerButton} onPress={() => setShowDatePicker(true)}>
+              <Text style={styles.pickerLabel}>Date</Text>
+              <Text style={styles.pickerValue}>{formatDateValue(appointmentDate)}</Text>
+            </Pressable>
+            <Pressable style={styles.pickerButton} onPress={() => setShowTimePicker(true)}>
+              <Text style={styles.pickerLabel}>Time</Text>
+              <Text style={styles.pickerValue}>{formatTimeValue(appointmentTime)}</Text>
+            </Pressable>
+
+            {showDatePicker && (
+              <DateTimePicker
+                value={appointmentDate}
+                mode="date"
+                display={Platform.OS === "ios" ? "inline" : "default"}
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(Platform.OS === "ios");
+                  if (selectedDate) {
+                    setAppointmentDate(selectedDate);
+                  }
+                }}
+              />
+            )}
+
+            {showTimePicker && (
+              <DateTimePicker
+                value={appointmentTime}
+                mode="time"
+                is24Hour={true}
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                onChange={(event, selectedTime) => {
+                  setShowTimePicker(Platform.OS === "ios");
+                  if (selectedTime) {
+                    setAppointmentTime(selectedTime);
+                  }
+                }}
+              />
+            )}
             <TextInput
               style={styles.modalInput}
               placeholder="Purpose (e.g., Property viewing)"
@@ -410,6 +448,23 @@ const styles = StyleSheet.create({
   },
   submitText: {
     color: "#fff",
+    fontWeight: "600"
+  },
+  pickerButton: {
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 12,
+    backgroundColor: "#fff"
+  },
+  pickerLabel: {
+    color: "#6b7280",
+    fontSize: 12
+  },
+  pickerValue: {
+    marginTop: 4,
+    color: "#111827",
     fontWeight: "600"
   }
 });

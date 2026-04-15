@@ -8,6 +8,7 @@ export default function HomeScreen({ navigation }) {
 
   const menuItems = [
     { label: "Browse Properties", screen: "PropertyList", icon: "🏠" },
+    { label: "Post Property", screen: "CreateProperty", icon: "📢" },
     { label: "My Favorites", screen: "Favorites", icon: "❤️" },
     { label: "Inquiries", screen: "Inquiries", icon: "💬" },
     { label: "Appointments", screen: "Appointments", icon: "📅" },

@@ -26,7 +26,13 @@ export default function NotificationsScreen() {
       const res = await notificationApi.getNotifications();
       setNotifications(res.data.data || []);
     } catch (err) {
-      setError(err.message || "Failed to load notifications");
+      // Retry once for transient cold-start/network failures.
+      try {
+        const retryRes = await notificationApi.getNotifications();
+        setNotifications(retryRes.data.data || []);
+      } catch (retryErr) {
+        setError(retryErr?.response?.data?.message || retryErr?.message || "Failed to load notifications");
+      }
     } finally {
       setLoading(false);
     }

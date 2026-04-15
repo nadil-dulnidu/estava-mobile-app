@@ -1,6 +1,7 @@
 // Service layer for booking visits and appointment status transitions.
 const Appointment = require("../models/Appointment");
 const Property = require("../models/Property");
+const Notification = require("../models/Notification");
 const AppError = require("../utils/AppError");
 
 const createAppointment = async (payload, userId) => {
@@ -13,7 +14,7 @@ const createAppointment = async (payload, userId) => {
     throw new AppError("You cannot book a visit for your own property", 400);
   }
 
-  return Appointment.create({
+  const appointment = await Appointment.create({
     propertyId: payload.propertyId,
     userId,
     agentId: property.createdBy,
@@ -22,6 +23,16 @@ const createAppointment = async (payload, userId) => {
     visitPurpose: payload.visitPurpose || "Property visit",
     appointmentStatus: "pending"
   });
+
+  await Notification.create({
+    userId: property.createdBy,
+    title: "New appointment request",
+    message: "A buyer requested a new property visit appointment.",
+    type: "appointment",
+    status: "unread"
+  });
+
+  return appointment;
 };
 
 const listAppointmentsForUser = async (user) => {
@@ -56,12 +67,25 @@ const updateAppointment = async (appointmentId, payload, user) => {
     throw new AppError("You do not have permission to update this appointment", 403);
   }
 
+  const nextStatus = payload.appointmentStatus !== undefined ? payload.appointmentStatus : payload.status;
+
   if (payload.date !== undefined) appointment.date = payload.date;
   if (payload.time !== undefined) appointment.time = payload.time;
   if (payload.visitPurpose !== undefined) appointment.visitPurpose = payload.visitPurpose;
-  if (payload.appointmentStatus !== undefined) appointment.appointmentStatus = payload.appointmentStatus;
+  if (nextStatus !== undefined) appointment.appointmentStatus = nextStatus;
 
   await appointment.save();
+
+  if (isAgent || isAdmin) {
+    await Notification.create({
+      userId: appointment.userId,
+      title: "Appointment updated",
+      message: `Your appointment status is now ${appointment.appointmentStatus}.`,
+      type: "appointment",
+      status: "unread"
+    });
+  }
+
   return appointment;
 };
 

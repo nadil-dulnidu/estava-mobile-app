@@ -29,6 +29,8 @@ const validateUpdateAppointmentInput = (payload) => {
     throw new AppError("Provide at least one field to update", 400);
   }
 
+  const nextStatus = payload.appointmentStatus !== undefined ? payload.appointmentStatus : payload.status;
+
   if (payload.date !== undefined && String(payload.date).trim().length < 8) {
     throw new AppError("Valid date is required", 400);
   }
@@ -41,10 +43,7 @@ const validateUpdateAppointmentInput = (payload) => {
     throw new AppError("visitPurpose must be 300 characters or less", 400);
   }
 
-  if (
-    payload.appointmentStatus !== undefined &&
-    !validStatuses.includes(payload.appointmentStatus)
-  ) {
+  if (nextStatus !== undefined && !validStatuses.includes(nextStatus)) {
     throw new AppError("Invalid appointmentStatus", 400);
   }
 };

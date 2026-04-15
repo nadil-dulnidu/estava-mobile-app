@@ -15,7 +15,7 @@ const router = express.Router();
 router.get("/", list);
 router.get("/:id", getById);
 
-router.post("/", protect, authorize("seller", "admin"), uploadPropertyImages, create);
+router.post("/", protect, authorize("buyer", "seller", "admin"), uploadPropertyImages, create);
 router.patch("/:id", protect, authorize("seller", "admin"), uploadPropertyImages, update);
 router.delete("/:id", protect, authorize("seller", "admin"), remove);
 

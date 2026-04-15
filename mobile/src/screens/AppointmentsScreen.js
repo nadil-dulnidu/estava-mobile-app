@@ -6,19 +6,14 @@ import {
   FlatList,
   Pressable,
   StyleSheet,
-  ActivityIndicator,
-  Modal,
-  TextInput
+  ActivityIndicator
 } from "react-native";
 import { appointmentApi } from "../api/appointmentApi";
 
-export default function AppointmentsScreen() {
+export default function AppointmentsScreen({ navigation }) {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [modalVisible, setModalVisible] = useState(false);
-  const [appointmentDate, setAppointmentDate] = useState("");
-  const [appointmentTime, setAppointmentTime] = useState("");
 
   useEffect(() => {
     loadAppointments();
@@ -52,8 +47,8 @@ export default function AppointmentsScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>My Appointments</Text>
       {!!error && <Text style={styles.error}>{error}</Text>}
-      <Pressable style={styles.bookButton} onPress={() => setModalVisible(true)}>
-        <Text style={styles.bookButtonText}>+ Book Appointment</Text>
+      <Pressable style={styles.bookButton} onPress={() => navigation.navigate("PropertyList")}>
+        <Text style={styles.bookButtonText}>+ Book from Properties</Text>
       </Pressable>
 
       {appointments.length === 0 ? (
@@ -64,49 +59,40 @@ export default function AppointmentsScreen() {
           keyExtractor={(item) => item._id}
           renderItem={({ item }) => (
             <View style={styles.card}>
-              <Text style={styles.property}>{item.propertyId?.title || "Property"}</Text>
-              <Text style={styles.date}>📅 {item.date}</Text>
-              <Text style={styles.time}>🕐 {item.time}</Text>
-              <Text style={[styles.status, { color: item.status === "confirmed" ? "#059669" : "#d97706" }]}>
-                {item.status.toUpperCase()}
-              </Text>
-              {item.status !== "cancelled" && (
-                <Pressable style={styles.cancelButton} onPress={() => onCancel(item._id)}>
-                  <Text style={styles.cancelText}>Cancel</Text>
-                </Pressable>
-              )}
+              {(() => {
+                const status = item.appointmentStatus || item.status || "pending";
+                return (
+                  <>
+                    <Text style={styles.property}>{item.propertyId?.title || "Property"}</Text>
+                    <Text style={styles.date}>📅 {item.date}</Text>
+                    <Text style={styles.time}>🕐 {item.time}</Text>
+                    <Text
+                      style={[
+                        styles.status,
+                        {
+                          color:
+                            status === "confirmed"
+                              ? "#059669"
+                              : status === "cancelled"
+                                ? "#b91c1c"
+                                : "#d97706"
+                        }
+                      ]}
+                    >
+                      {status.toUpperCase()}
+                    </Text>
+                    {status !== "cancelled" && (
+                      <Pressable style={styles.cancelButton} onPress={() => onCancel(item._id)}>
+                        <Text style={styles.cancelText}>Cancel</Text>
+                      </Pressable>
+                    )}
+                  </>
+                );
+              })()}
             </View>
           )}
         />
       )}
-
-      <Modal visible={modalVisible} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Book Appointment</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Date (YYYY-MM-DD)"
-              value={appointmentDate}
-              onChangeText={setAppointmentDate}
-            />
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Time (HH:MM)"
-              value={appointmentTime}
-              onChangeText={setAppointmentTime}
-            />
-            <View style={styles.modalButtons}>
-              <Pressable style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
-                <Text style={styles.cancelTxt}>Cancel</Text>
-              </Pressable>
-              <Pressable style={styles.submitBtn} onPress={() => setModalVisible(false)}>
-                <Text style={styles.submitText}>Book</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -135,14 +121,5 @@ const styles = StyleSheet.create({
   time: { fontSize: 14, color: "#374151", marginTop: 4 },
   status: { fontSize: 12, fontWeight: "600", marginTop: 4 },
   cancelButton: { marginTop: 8, paddingVertical: 6, alignItems: "center" },
-  cancelText: { color: "#b91c1c", fontWeight: "600" },
-  modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.3)" },
-  modalContent: { backgroundColor: "#fff", padding: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16 },
-  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12 },
-  modalInput: { borderWidth: 1, borderColor: "#d1d5db", borderRadius: 8, padding: 10, marginBottom: 12 },
-  modalButtons: { flexDirection: "row", justifyContent: "space-around" },
-  cancelBtn: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, backgroundColor: "#e5e7eb" },
-  cancelTxt: { color: "#374151", fontWeight: "600" },
-  submitBtn: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, backgroundColor: "#1d4ed8" },
-  submitText: { color: "#fff", fontWeight: "600" }
+  cancelText: { color: "#b91c1c", fontWeight: "600" }
 });

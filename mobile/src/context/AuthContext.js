@@ -13,10 +13,25 @@ export function AuthProvider({ children }) {
     setLoading(true);
     try {
       const normalizedEmail = String(email || "").trim().toLowerCase();
-      const response = await apiClient.post("/auth/login", {
-        email: normalizedEmail,
-        password
-      });
+      let response;
+
+      try {
+        response = await apiClient.post("/auth/login", {
+          email: normalizedEmail,
+          password
+        });
+      } catch (firstError) {
+        const isTransient = !firstError?.response;
+        if (!isTransient) {
+          throw firstError;
+        }
+
+        response = await apiClient.post("/auth/login", {
+          email: normalizedEmail,
+          password
+        });
+      }
+
       const payload = response.data.data;
       setUser(payload.user);
       setToken(payload.token);
