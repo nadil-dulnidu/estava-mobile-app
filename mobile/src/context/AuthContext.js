@@ -12,7 +12,11 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     setLoading(true);
     try {
-      const response = await apiClient.post("/auth/login", { email, password });
+      const normalizedEmail = String(email || "").trim().toLowerCase();
+      const response = await apiClient.post("/auth/login", {
+        email: normalizedEmail,
+        password
+      });
       const payload = response.data.data;
       setUser(payload.user);
       setToken(payload.token);
@@ -29,9 +33,10 @@ export function AuthProvider({ children }) {
   const register = async ({ fullName, email, password, role }) => {
     setLoading(true);
     try {
+      const normalizedEmail = String(email || "").trim().toLowerCase();
       const response = await apiClient.post("/auth/register", {
         fullName,
-        email,
+        email: normalizedEmail,
         password,
         role
       });
