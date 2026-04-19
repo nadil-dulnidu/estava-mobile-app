@@ -27,7 +27,8 @@ export default function PropertyListScreen({ navigation }) {
     try {
       setError("");
       const result = await getProperties({ page: 1, limit: 20 });
-      setItems(result?.items || []);
+      const visibleItems = (result?.items || []).filter((item) => item?.listingStatus !== "delisted");
+      setItems(visibleItems);
     } catch (fetchError) {
       setError(fetchError?.response?.data?.message || "Failed to load properties");
     } finally {

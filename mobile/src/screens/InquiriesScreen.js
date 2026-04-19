@@ -8,20 +8,59 @@ import {
   StyleSheet,
   ActivityIndicator,
   Modal,
-  TextInput
+  TextInput,
+  Alert
 } from "react-native";
 import { inquiryApi } from "../api/inquiryApi";
 import { useAuth } from "../context/AuthContext";
+
+const getApiErrorMessage = (error, fallbackMessage) => {
+  return error?.response?.data?.message || error?.message || fallbackMessage;
+};
+
+const resolveUserId = (userRef) => {
+  if (!userRef) return "";
+  if (typeof userRef === "string") return userRef;
+  return userRef._id || userRef.id || "";
+};
+
+const hasResponseMessage = (inquiry) => {
+  return Boolean((inquiry?.responseMessage || "").trim());
+};
+
+const getInquiryStatus = (inquiry) => {
+  return (inquiry?.inquiryStatus || inquiry?.status || "pending").toLowerCase();
+};
+
+const getStatusColor = (status) => {
+  if (status === "replied") return "#059669";
+  if (status === "closed") return "#6b7280";
+  return "#d97706";
+};
+
+const toStatusLabel = (status) => {
+  if (!status) return "Pending";
+  return `${status.charAt(0).toUpperCase()}${status.slice(1)}`;
+};
 
 export default function InquiriesScreen() {
   const { user } = useAuth();
   const [inquiries, setInquiries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("incoming");
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedInquiry, setSelectedInquiry] = useState(null);
+
+  const [responseModalVisible, setResponseModalVisible] = useState(false);
+  const [responseMode, setResponseMode] = useState("create");
+  const [responseInquiry, setResponseInquiry] = useState(null);
   const [responseMessage, setResponseMessage] = useState("");
+
+  const [editInquiryModalVisible, setEditInquiryModalVisible] = useState(false);
+  const [editInquiry, setEditInquiry] = useState(null);
+  const [editSubject, setEditSubject] = useState("");
+  const [editMessage, setEditMessage] = useState("");
+  const [editContact, setEditContact] = useState("");
 
   useEffect(() => {
     loadInquiries();
@@ -34,34 +73,158 @@ export default function InquiriesScreen() {
       const res = await inquiryApi.getMyInquiries();
       setInquiries(res.data.data || []);
     } catch (err) {
-      setError(err.message || "Failed to load inquiries");
+      setError(getApiErrorMessage(err, "Failed to load inquiries"));
     } finally {
       setLoading(false);
     }
   };
 
-  const onRespond = async () => {
-    if (!responseMessage.trim()) {
-      setError("Response cannot be empty");
+  const openResponseModal = (item) => {
+    const hasResponse = hasResponseMessage(item);
+    setResponseInquiry(item);
+    setResponseMode(hasResponse ? "edit" : "create");
+    setResponseMessage(item.responseMessage || "");
+    setError("");
+    setResponseModalVisible(true);
+  };
+
+  const closeResponseModal = () => {
+    setResponseModalVisible(false);
+    setResponseInquiry(null);
+    setResponseMessage("");
+  };
+
+  const onSaveResponse = async () => {
+    const nextResponse = responseMessage.trim();
+    if (nextResponse.length < 3) {
+      setError("Response must be at least 3 characters");
       return;
     }
+
+    if (!responseInquiry?._id) return;
+
+    setActionLoading(true);
+    setError("");
     try {
-      await inquiryApi.updateInquiry(selectedInquiry._id, {
-        inquiryStatus: "replied",
-        responseMessage
-      });
-      setModalVisible(false);
-      setResponseMessage("");
-      loadInquiries();
+      await inquiryApi.saveInquiryResponse(responseInquiry._id, nextResponse);
+      closeResponseModal();
+      await loadInquiries();
     } catch (err) {
-      setError("Failed to respond");
+      setError(getApiErrorMessage(err, "Failed to save response"));
+    } finally {
+      setActionLoading(false);
     }
   };
 
-  const currentUserId = user?.id || user?._id;
-  const incoming = inquiries.filter((item) => item.agentId?._id === currentUserId);
-  const outgoing = inquiries.filter((item) => item.senderUserId?._id === currentUserId);
-  const filtered = activeTab === "incoming" ? incoming : outgoing;
+  const onClearResponse = (item) => {
+    Alert.alert("Clear response", "This will remove the current response message. Continue?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Clear",
+        style: "destructive",
+        onPress: async () => {
+          setActionLoading(true);
+          setError("");
+          try {
+            await inquiryApi.clearInquiryResponse(item._id);
+            await loadInquiries();
+          } catch (err) {
+            setError(getApiErrorMessage(err, "Failed to clear response"));
+          } finally {
+            setActionLoading(false);
+          }
+        }
+      }
+    ]);
+  };
+
+  const openEditInquiryModal = (item) => {
+    setEditInquiry(item);
+    setEditSubject(item.subject || "");
+    setEditMessage(item.message || "");
+    setEditContact(item.contactNumber || "");
+    setError("");
+    setEditInquiryModalVisible(true);
+  };
+
+  const closeEditInquiryModal = () => {
+    setEditInquiryModalVisible(false);
+    setEditInquiry(null);
+    setEditSubject("");
+    setEditMessage("");
+    setEditContact("");
+  };
+
+  const onSaveInquiryEdits = async () => {
+    const subject = editSubject.trim();
+    const message = editMessage.trim();
+    const contactNumber = editContact.trim();
+
+    if (subject.length < 3 || subject.length > 160) {
+      setError("Subject must be between 3 and 160 characters");
+      return;
+    }
+
+    if (message.length < 10 || message.length > 3000) {
+      setError("Message must be between 10 and 3000 characters");
+      return;
+    }
+
+    if (contactNumber.length > 40) {
+      setError("Contact number must be 40 characters or less");
+      return;
+    }
+
+    if (!editInquiry?._id) return;
+
+    setActionLoading(true);
+    setError("");
+    try {
+      await inquiryApi.updateInquiryDetails(editInquiry._id, {
+        subject,
+        message,
+        contactNumber
+      });
+      closeEditInquiryModal();
+      await loadInquiries();
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Failed to update inquiry"));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const onDeleteInquiry = (item) => {
+    Alert.alert(
+      "Delete inquiry",
+      "This inquiry can be deleted because a seller response exists. Continue?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            setActionLoading(true);
+            setError("");
+            try {
+              await inquiryApi.removeInquiry(item._id);
+              await loadInquiries();
+            } catch (err) {
+              setError(getApiErrorMessage(err, "Failed to delete inquiry"));
+            } finally {
+              setActionLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const currentUserId = user?.id || user?._id || "";
+  const incoming = inquiries.filter((item) => resolveUserId(item.agentId) === currentUserId);
+  const sent = inquiries.filter((item) => resolveUserId(item.senderUserId) === currentUserId);
+  const filtered = activeTab === "incoming" ? incoming : sent;
+  const isEditingResponse = responseMode === "edit";
 
   if (loading) return <ActivityIndicator style={{ marginTop: 20 }} size="large" />;
 
@@ -80,11 +243,11 @@ export default function InquiriesScreen() {
           </Text>
         </Pressable>
         <Pressable
-          style={[styles.tabButton, activeTab === "outgoing" && styles.tabButtonActive]}
-          onPress={() => setActiveTab("outgoing")}
+          style={[styles.tabButton, activeTab === "sent" && styles.tabButtonActive]}
+          onPress={() => setActiveTab("sent")}
         >
-          <Text style={[styles.tabText, activeTab === "outgoing" && styles.tabTextActive]}>
-            Sent ({outgoing.length})
+          <Text style={[styles.tabText, activeTab === "sent" && styles.tabTextActive]}>
+            Sent ({sent.length})
           </Text>
         </Pressable>
       </View>
@@ -95,69 +258,160 @@ export default function InquiriesScreen() {
         <FlatList
           data={filtered}
           keyExtractor={(item) => item._id}
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              <Text style={styles.property}>{item.propertyId?.title || "Property"}</Text>
-              <Text style={styles.subject}>{item.subject}</Text>
-              <Text style={styles.message}>{item.message}</Text>
-              <Text style={styles.contact}>Contact: {item.contactNumber}</Text>
-              <Text
-                style={[
-                  styles.status,
-                  {
-                    color:
-                      item.inquiryStatus === "replied"
-                        ? "#059669"
-                        : item.inquiryStatus === "closed"
-                          ? "#6b7280"
-                          : "#d97706"
-                  }
-                ]}
-              >
-                Status: {item.inquiryStatus || "pending"}
-              </Text>
+          renderItem={({ item }) => {
+            const status = getInquiryStatus(item);
+            const hasResponse = hasResponseMessage(item);
+            const isIncoming = activeTab === "incoming";
 
-              {item.responseMessage ? (
-                <View style={styles.responseBox}>
-                  <Text style={styles.responseLabel}>Owner response:</Text>
-                  <Text style={styles.responseText}>{item.responseMessage}</Text>
+            return (
+              <View style={styles.card}>
+                <Text style={styles.property}>{item.propertyId?.title || "Property"}</Text>
+                <Text style={styles.subject}>{item.subject}</Text>
+                <Text style={styles.message}>{item.message}</Text>
+                <Text style={styles.contact}>Contact: {item.contactNumber || "-"}</Text>
+                <Text style={[styles.status, { color: getStatusColor(status) }]}>Status: {toStatusLabel(status)}</Text>
+
+                {hasResponse ? (
+                  <View style={styles.responseBox}>
+                    <Text style={styles.responseLabel}>Seller response:</Text>
+                    <Text style={styles.responseText}>{item.responseMessage}</Text>
+                    {item.respondedAt ? (
+                      <Text style={styles.responseDate}>
+                        Responded: {new Date(item.respondedAt).toLocaleString()}
+                      </Text>
+                    ) : null}
+                  </View>
+                ) : null}
+
+                <View style={styles.actionsRow}>
+                  {isIncoming ? (
+                    <>
+                      <Pressable
+                        style={styles.actionPrimary}
+                        onPress={() => openResponseModal(item)}
+                        disabled={actionLoading}
+                      >
+                        <Text style={styles.actionPrimaryText}>
+                          {hasResponse ? "Edit Response" : "Create Response"}
+                        </Text>
+                      </Pressable>
+                      {hasResponse ? (
+                        <Pressable
+                          style={styles.actionDanger}
+                          onPress={() => onClearResponse(item)}
+                          disabled={actionLoading}
+                        >
+                          <Text style={styles.actionDangerText}>Clear Response</Text>
+                        </Pressable>
+                      ) : null}
+                    </>
+                  ) : (
+                    <>
+                      <Pressable
+                        style={styles.actionSecondary}
+                        onPress={() => openEditInquiryModal(item)}
+                        disabled={actionLoading}
+                      >
+                        <Text style={styles.actionSecondaryText}>Edit Inquiry</Text>
+                      </Pressable>
+                      {hasResponse ? (
+                        <Pressable
+                          style={styles.actionDanger}
+                          onPress={() => onDeleteInquiry(item)}
+                          disabled={actionLoading}
+                        >
+                          <Text style={styles.actionDangerText}>Delete Inquiry</Text>
+                        </Pressable>
+                      ) : null}
+                    </>
+                  )}
                 </View>
-              ) : null}
 
-              {activeTab === "incoming" && item.inquiryStatus !== "replied" && (
-                <Pressable
-                  style={styles.respondButton}
-                  onPress={() => {
-                    setSelectedInquiry(item);
-                    setModalVisible(true);
-                  }}
-                >
-                  <Text style={styles.respondText}>Respond</Text>
-                </Pressable>
-              )}
-            </View>
-          )}
+                {!isIncoming && !hasResponse ? (
+                  <Text style={styles.actionHint}>Delete is available after a seller response.</Text>
+                ) : null}
+              </View>
+            );
+          }}
         />
       )}
 
-      <Modal visible={modalVisible} transparent animationType="slide">
+      <Modal
+        visible={responseModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={closeResponseModal}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Respond to Inquiry</Text>
+            <Text style={styles.modalTitle}>{isEditingResponse ? "Edit Response" : "Create Response"}</Text>
             <TextInput
-              style={styles.modalInput}
-              placeholder="Type your response..."
+              style={[styles.modalInput, styles.modalInputLarge]}
+              placeholder="Type response message..."
               multiline
               numberOfLines={4}
               value={responseMessage}
               onChangeText={setResponseMessage}
             />
             <View style={styles.modalButtons}>
-              <Pressable style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
+              <Pressable style={styles.cancelBtn} onPress={closeResponseModal} disabled={actionLoading}>
                 <Text style={styles.cancelText}>Cancel</Text>
               </Pressable>
-              <Pressable style={styles.submitBtn} onPress={onRespond}>
-                <Text style={styles.submitText}>Send</Text>
+              <Pressable
+                style={[styles.submitBtn, actionLoading && styles.submitBtnDisabled]}
+                onPress={onSaveResponse}
+                disabled={actionLoading}
+              >
+                <Text style={styles.submitText}>{isEditingResponse ? "Save Response" : "Send Response"}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={editInquiryModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={closeEditInquiryModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Edit Sent Inquiry</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Subject"
+              value={editSubject}
+              onChangeText={setEditSubject}
+              maxLength={160}
+            />
+            <TextInput
+              style={[styles.modalInput, styles.modalInputLarge]}
+              placeholder="Message"
+              multiline
+              numberOfLines={4}
+              value={editMessage}
+              onChangeText={setEditMessage}
+              maxLength={3000}
+            />
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Contact Number"
+              keyboardType="phone-pad"
+              value={editContact}
+              onChangeText={setEditContact}
+              maxLength={40}
+            />
+            <View style={styles.modalButtons}>
+              <Pressable style={styles.cancelBtn} onPress={closeEditInquiryModal} disabled={actionLoading}>
+                <Text style={styles.cancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.submitBtn, actionLoading && styles.submitBtnDisabled]}
+                onPress={onSaveInquiryEdits}
+                disabled={actionLoading}
+              >
+                <Text style={styles.submitText}>Save Inquiry</Text>
               </Pressable>
             </View>
           </View>
@@ -194,8 +448,6 @@ const styles = StyleSheet.create({
   tabButtonActive: { backgroundColor: "#1d4ed8" },
   tabText: { fontWeight: "600", color: "#374151" },
   tabTextActive: { color: "#fff" },
-  respondButton: { marginTop: 8, paddingVertical: 6, alignItems: "center" },
-  respondText: { color: "#1d4ed8", fontWeight: "600" },
   responseBox: {
     marginTop: 8,
     padding: 8,
@@ -206,13 +458,76 @@ const styles = StyleSheet.create({
   },
   responseLabel: { fontSize: 12, fontWeight: "700", color: "#1e40af" },
   responseText: { marginTop: 4, color: "#1f2937" },
+  responseDate: { marginTop: 4, fontSize: 12, color: "#4b5563" },
+  actionsRow: {
+    marginTop: 8,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center"
+  },
+  actionPrimary: {
+    backgroundColor: "#1d4ed8",
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    marginRight: 8,
+    marginBottom: 8
+  },
+  actionPrimaryText: { color: "#fff", fontWeight: "700", fontSize: 12 },
+  actionSecondary: {
+    backgroundColor: "#e5e7eb",
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    marginRight: 8,
+    marginBottom: 8
+  },
+  actionSecondaryText: { color: "#374151", fontWeight: "700", fontSize: 12 },
+  actionDanger: {
+    backgroundColor: "#fee2e2",
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    marginRight: 8,
+    marginBottom: 8
+  },
+  actionDangerText: { color: "#b91c1c", fontWeight: "700", fontSize: 12 },
+  actionHint: { color: "#6b7280", fontSize: 12, marginTop: 2 },
   modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.3)" },
-  modalContent: { backgroundColor: "#fff", padding: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16 },
+  modalContent: {
+    backgroundColor: "#fff",
+    padding: 16,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16
+  },
   modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12 },
-  modalInput: { borderWidth: 1, borderColor: "#d1d5db", borderRadius: 8, padding: 10, marginBottom: 12 },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 12
+  },
+  modalInputLarge: {
+    minHeight: 90,
+    textAlignVertical: "top"
+  },
   modalButtons: { flexDirection: "row", justifyContent: "space-around" },
-  cancelBtn: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, backgroundColor: "#e5e7eb" },
+  cancelBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    backgroundColor: "#e5e7eb"
+  },
   cancelText: { color: "#374151", fontWeight: "600" },
-  submitBtn: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, backgroundColor: "#1d4ed8" },
+  submitBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    backgroundColor: "#1d4ed8"
+  },
+  submitBtnDisabled: {
+    opacity: 0.5
+  },
   submitText: { color: "#fff", fontWeight: "600" }
 });

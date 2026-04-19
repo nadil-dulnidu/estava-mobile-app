@@ -19,9 +19,9 @@ export default function CreatePropertyScreen({ navigation }) {
   const [price, setPrice] = useState("");
   const [propertyType, setPropertyType] = useState("apartment");
   const [listingStatus, setListingStatus] = useState("available");
-  const [bedrooms, setBedrooms] = useState("1");
-  const [bathrooms, setBathrooms] = useState("1");
-  const [areaSize, setAreaSize] = useState("500");
+  const [bedrooms, setBedrooms] = useState("");
+  const [bathrooms, setBathrooms] = useState("");
+  const [areaSize, setAreaSize] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -132,25 +132,32 @@ export default function CreatePropertyScreen({ navigation }) {
       </View>
 
       <View style={styles.inlineInputs}>
-        <TextInput
-          style={[styles.input, styles.inlineInput]}
-          placeholder="Bedrooms"
-          keyboardType="numeric"
-          value={bedrooms}
-          onChangeText={setBedrooms}
-        />
-        <TextInput
-          style={[styles.input, styles.inlineInput]}
-          placeholder="Bathrooms"
-          keyboardType="numeric"
-          value={bathrooms}
-          onChangeText={setBathrooms}
-        />
+        <View style={styles.inlineField}>
+          <Text style={styles.inputLabel}>Bedrooms</Text>
+          <TextInput
+            style={[styles.input, styles.inlineInput]}
+            placeholder="e.g. 3"
+            keyboardType="numeric"
+            value={bedrooms}
+            onChangeText={setBedrooms}
+          />
+        </View>
+        <View style={styles.inlineField}>
+          <Text style={styles.inputLabel}>Bathrooms</Text>
+          <TextInput
+            style={[styles.input, styles.inlineInput]}
+            placeholder="e.g. 2"
+            keyboardType="numeric"
+            value={bathrooms}
+            onChangeText={setBathrooms}
+          />
+        </View>
       </View>
 
+      <Text style={styles.inputLabel}>Land / Area Size (sqft)</Text>
       <TextInput
         style={styles.input}
-        placeholder="Area Size (sqft)"
+        placeholder="e.g. 1200"
         keyboardType="numeric"
         value={areaSize}
         onChangeText={setAreaSize}
@@ -190,6 +197,11 @@ const styles = StyleSheet.create({
     color: "#1f2937",
     marginBottom: 8
   },
+  inputLabel: {
+    fontWeight: "600",
+    color: "#374151",
+    marginBottom: 6
+  },
   row: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -216,8 +228,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10
   },
-  inlineInput: {
+  inlineField: {
     flex: 1
+  },
+  inlineInput: {
+    marginBottom: 12
   },
   submitButton: {
     backgroundColor: "#1d4ed8",

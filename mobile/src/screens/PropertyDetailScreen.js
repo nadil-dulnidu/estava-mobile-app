@@ -14,17 +14,25 @@ import {
   Platform
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { getPropertyById } from "../api/propertyApi";
+import { deleteProperty, getPropertyById, updateProperty } from "../api/propertyApi";
 import { favoriteApi } from "../api/favoriteApi";
 import { inquiryApi } from "../api/inquiryApi";
 import { appointmentApi } from "../api/appointmentApi";
+import { reviewApi } from "../api/reviewApi";
+import { useAuth } from "../context/AuthContext";
 
-export default function PropertyDetailScreen({ route }) {
+export default function PropertyDetailScreen({ route, navigation }) {
   const { propertyId } = route.params;
+  const { user } = useAuth();
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteId, setFavoriteId] = useState("");
+  const [reviews, setReviews] = useState([]);
+  const [reviewStats, setReviewStats] = useState({ avgRating: 0, total: 0 });
+  const [reviewsError, setReviewsError] = useState("");
+  const [ownerActionLoading, setOwnerActionLoading] = useState(false);
 
   // Inquiry modal state
   const [inquiryModalVisible, setInquiryModalVisible] = useState(false);
@@ -40,6 +48,21 @@ export default function PropertyDetailScreen({ route }) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
+  const getNormalizedUserId = (entity) => {
+    if (!entity) return "";
+    if (typeof entity === "string") return entity;
+    return entity._id || entity.id || "";
+  };
+
+  const currentUserId = getNormalizedUserId(user);
+  const ownerId = getNormalizedUserId(property?.createdBy);
+  const isOwner = !!currentUserId && !!ownerId && String(currentUserId) === String(ownerId);
+
+  const renderStars = (value) => {
+    const normalized = Math.max(0, Math.min(5, Math.round(Number(value) || 0)));
+    return `${"★".repeat(normalized)}${"☆".repeat(5 - normalized)}`;
+  };
+
   const formatDateValue = (value) => {
     const year = value.getFullYear();
     const month = String(value.getMonth() + 1).padStart(2, "0");
@@ -53,26 +76,123 @@ export default function PropertyDetailScreen({ route }) {
     return `${hours}:${minutes}`;
   };
 
+  const resolveFavoriteIdForProperty = async (targetPropertyId) => {
+    const response = await favoriteApi.getFavorites();
+    const favorites = Array.isArray(response?.data?.data) ? response.data.data : [];
+
+    const matchedFavorite = favorites.find((favoriteItem) => {
+      const propertyRef = favoriteItem?.propertyId;
+      const candidatePropertyId = typeof propertyRef === "string" ? propertyRef : propertyRef?._id;
+
+      return String(candidatePropertyId || "") === String(targetPropertyId || "");
+    });
+
+    return matchedFavorite?._id || "";
+  };
+
+  const syncFavoriteState = async (targetPropertyId) => {
+    try {
+      const matchedFavoriteId = await resolveFavoriteIdForProperty(targetPropertyId);
+      setFavoriteId(matchedFavoriteId);
+      setIsFavorite(Boolean(matchedFavoriteId));
+    } catch {
+      setFavoriteId("");
+      setIsFavorite(false);
+    }
+  };
+
+  const loadPropertyReviews = async () => {
+    try {
+      setReviewsError("");
+      const reviewData = await reviewApi.getPropertyReviews(propertyId);
+      setReviews(Array.isArray(reviewData?.reviews) ? reviewData.reviews : []);
+      setReviewStats({
+        avgRating: Number(reviewData?.avgRating || 0),
+        total: Number(reviewData?.total || 0)
+      });
+    } catch (reviewsFetchError) {
+      setReviews([]);
+      setReviewStats({ avgRating: 0, total: 0 });
+      setReviewsError(reviewsFetchError?.response?.data?.message || "Failed to load reviews");
+    }
+  };
+
   useEffect(() => {
     const load = async () => {
       try {
         setError("");
         const result = await getPropertyById(propertyId);
         setProperty(result);
+        await syncFavoriteState(result?._id || propertyId);
       } catch (fetchError) {
+        setFavoriteId("");
+        setIsFavorite(false);
         setError(fetchError?.response?.data?.message || "Failed to load property details");
       } finally {
         setLoading(false);
       }
+
+      await loadPropertyReviews();
     };
 
     load();
   }, [propertyId]);
 
+  const handleStatusUpdate = async (status) => {
+    if (!isOwner || ownerActionLoading || property?.listingStatus === status) {
+      return;
+    }
+
+    setOwnerActionLoading(true);
+    try {
+      const updated = await updateProperty(propertyId, { listingStatus: status });
+      setProperty(updated);
+      Alert.alert("Success", "Listing status updated");
+    } catch (updateError) {
+      Alert.alert("Error", updateError?.response?.data?.message || "Failed to update listing status");
+    } finally {
+      setOwnerActionLoading(false);
+    }
+  };
+
+  const handleDeleteProperty = () => {
+    if (!isOwner || ownerActionLoading) {
+      return;
+    }
+
+    Alert.alert("Delete Listing", "Are you sure you want to delete this property listing?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          setOwnerActionLoading(true);
+          try {
+            await deleteProperty(propertyId);
+            Alert.alert("Success", "Property deleted successfully", [
+              { text: "OK", onPress: () => navigation.goBack() }
+            ]);
+          } catch (deleteError) {
+            Alert.alert("Error", deleteError?.response?.data?.message || "Failed to delete property");
+          } finally {
+            setOwnerActionLoading(false);
+          }
+        }
+      }
+    ]);
+  };
+
   const handleAddFavorite = async () => {
     try {
-      await favoriteApi.addFavorite(propertyId);
-      setIsFavorite(true);
+      const response = await favoriteApi.addFavorite(propertyId);
+      const createdFavoriteId = response?.data?.data?._id || "";
+
+      if (createdFavoriteId) {
+        setFavoriteId(createdFavoriteId);
+        setIsFavorite(true);
+      } else {
+        await syncFavoriteState(propertyId);
+      }
       Alert.alert("Success", "Added to favorites");
     } catch (err) {
       Alert.alert("Error", err.response?.data?.message || "Failed to add favorite");
@@ -81,12 +201,25 @@ export default function PropertyDetailScreen({ route }) {
 
   const handleRemoveFavorite = async () => {
     try {
-      // Need favoriteId - for now, just toggle via API
-      // In production, store favoriteId when adding
+      let targetFavoriteId = favoriteId;
+
+      if (!targetFavoriteId) {
+        targetFavoriteId = await resolveFavoriteIdForProperty(propertyId);
+      }
+
+      if (!targetFavoriteId) {
+        setFavoriteId("");
+        setIsFavorite(false);
+        Alert.alert("Info", "Property is not in your favorites");
+        return;
+      }
+
+      await favoriteApi.removeFavorite(targetFavoriteId);
+      setFavoriteId("");
       setIsFavorite(false);
       Alert.alert("Success", "Removed from favorites");
     } catch (err) {
-      Alert.alert("Error", "Failed to remove favorite");
+      Alert.alert("Error", err.response?.data?.message || "Failed to remove favorite");
     }
   };
 
@@ -161,6 +294,43 @@ export default function PropertyDetailScreen({ route }) {
       <Text style={styles.price}>LKR {Number(property.price || 0).toLocaleString()}</Text>
       <Text style={styles.status}>Status: {property.listingStatus}</Text>
 
+      {isOwner ? (
+        <>
+          <Text style={styles.sectionTitle}>Owner Controls</Text>
+          <Text style={styles.ownerHint}>Only you can manage this listing status or remove it.</Text>
+          <View style={styles.statusChipRow}>
+            {["available", "rented", "delisted", "sold"].map((statusOption) => (
+              <Pressable
+                key={statusOption}
+                style={[
+                  styles.statusChip,
+                  property.listingStatus === statusOption && styles.statusChipActive,
+                  ownerActionLoading && styles.disabledControl
+                ]}
+                onPress={() => handleStatusUpdate(statusOption)}
+                disabled={ownerActionLoading}
+              >
+                <Text
+                  style={[
+                    styles.statusChipText,
+                    property.listingStatus === statusOption && styles.statusChipTextActive
+                  ]}
+                >
+                  {statusOption.charAt(0).toUpperCase() + statusOption.slice(1)}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <Pressable
+            style={[styles.deleteListingButton, ownerActionLoading && styles.disabledControl]}
+            onPress={handleDeleteProperty}
+            disabled={ownerActionLoading}
+          >
+            <Text style={styles.deleteListingText}>Delete Listing</Text>
+          </Pressable>
+        </>
+      ) : null}
+
       {/* Action Buttons */}
       <View style={styles.actionButtonsContainer}>
         <Pressable
@@ -205,6 +375,25 @@ export default function PropertyDetailScreen({ route }) {
           <Text style={styles.body}>{property.features.join(", ")}</Text>
         </>
       ) : null}
+
+      <Text style={styles.sectionTitle}>Reviews</Text>
+      <Text style={styles.reviewSummary}>
+        Average: {reviewStats.avgRating.toFixed(1)} / 5 ({reviewStats.total} review
+        {reviewStats.total === 1 ? "" : "s"})
+      </Text>
+      {reviewsError ? <Text style={styles.error}>{reviewsError}</Text> : null}
+
+      {reviews.length === 0 ? (
+        <Text style={styles.body}>No reviews yet.</Text>
+      ) : (
+        reviews.map((review) => (
+          <View key={review._id} style={styles.reviewCard}>
+            <Text style={styles.reviewAuthor}>{review.userId?.fullName || "Anonymous user"}</Text>
+            <Text style={styles.reviewStars}>{renderStars(review.rating)}</Text>
+            <Text style={styles.reviewComment}>{review.comment || "No comment provided."}</Text>
+          </View>
+        ))
+      )}
 
       {/* Inquiry Modal */}
       <Modal visible={inquiryModalVisible} transparent animationType="slide">
@@ -341,6 +530,48 @@ const styles = StyleSheet.create({
     marginTop: 8,
     color: "#4b5563"
   },
+  ownerHint: {
+    color: "#6b7280",
+    marginBottom: 10
+  },
+  statusChipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 12
+  },
+  statusChip: {
+    backgroundColor: "#e5e7eb",
+    borderRadius: 16,
+    paddingVertical: 7,
+    paddingHorizontal: 12
+  },
+  statusChipActive: {
+    backgroundColor: "#1d4ed8"
+  },
+  statusChipText: {
+    color: "#374151",
+    fontWeight: "600"
+  },
+  statusChipTextActive: {
+    color: "#ffffff"
+  },
+  deleteListingButton: {
+    backgroundColor: "#fee2e2",
+    borderColor: "#ef4444",
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: "center",
+    marginBottom: 6
+  },
+  deleteListingText: {
+    color: "#b91c1c",
+    fontWeight: "700"
+  },
+  disabledControl: {
+    opacity: 0.6
+  },
   actionButtonsContainer: {
     flexDirection: "row",
     justifyContent: "space-around",
@@ -392,6 +623,32 @@ const styles = StyleSheet.create({
   body: {
     color: "#374151",
     lineHeight: 22
+  },
+  reviewSummary: {
+    color: "#1f2937",
+    fontWeight: "600",
+    marginBottom: 10
+  },
+  reviewCard: {
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 10
+  },
+  reviewAuthor: {
+    color: "#111827",
+    fontWeight: "700"
+  },
+  reviewStars: {
+    marginTop: 6,
+    color: "#f59e0b",
+    fontSize: 16
+  },
+  reviewComment: {
+    marginTop: 6,
+    color: "#374151"
   },
   error: {
     color: "#b91c1c",

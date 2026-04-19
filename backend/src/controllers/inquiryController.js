@@ -3,13 +3,16 @@ const catchAsync = require("../utils/catchAsync");
 const { successResponse } = require("../utils/apiResponse");
 const {
   validateCreateInquiryInput,
-  validateUpdateInquiryInput
+  validateUpdateInquiryInput,
+  validateInquiryIdParam,
+  validateClearResponseInput
 } = require("../validators/inquiryValidator");
 const {
   createInquiry,
   listInquiriesForUser,
   updateInquiry,
-  deleteInquiry
+  deleteInquiry,
+  clearInquiryResponse
 } = require("../services/inquiryService");
 
 const create = catchAsync(async (req, res) => {
@@ -24,19 +27,30 @@ const listMine = catchAsync(async (req, res) => {
 });
 
 const update = catchAsync(async (req, res) => {
+  validateInquiryIdParam(req.params.id);
   validateUpdateInquiryInput(req.body);
   const inquiry = await updateInquiry(req.params.id, req.body, req.user);
   return successResponse(res, inquiry, "Inquiry updated successfully", 200);
 });
 
 const remove = catchAsync(async (req, res) => {
+  validateInquiryIdParam(req.params.id);
   await deleteInquiry(req.params.id, req.user);
   return successResponse(res, null, "Inquiry deleted successfully", 200);
+});
+
+const clearResponse = catchAsync(async (req, res) => {
+  validateInquiryIdParam(req.params.id);
+  validateClearResponseInput(req.body || {});
+
+  const inquiry = await clearInquiryResponse(req.params.id, req.user);
+  return successResponse(res, inquiry, "Inquiry response cleared successfully", 200);
 });
 
 module.exports = {
   create,
   listMine,
   update,
-  remove
+  remove,
+  clearResponse
 };

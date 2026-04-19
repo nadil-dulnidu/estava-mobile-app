@@ -40,6 +40,16 @@ const appointmentSchema = new mongoose.Schema(
       enum: ["pending", "confirmed", "completed", "cancelled"],
       default: "pending",
       index: true
+    },
+    isDeletedByBuyer: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+    isDeletedBySeller: {
+      type: Boolean,
+      default: false,
+      index: true
     }
   },
   {

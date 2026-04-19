@@ -85,7 +85,7 @@
 | floorArea | Number | In sqm | ✗ |
 | features | [String] | Array of amenities | ✗ |
 | imageUrls | [String] | Array of image URLs | ✗ |
-| listingStatus | String | Enum: available, sold, rented | ✓ |
+| listingStatus | String | Enum: available, sold, rented, delisted | ✓ |
 | sellerId | ObjectId | FK to User (agent/seller) | ✓ |
 | createdAt | Date | Auto-set on create | ✓ |
 | updatedAt | Date | Auto-set on update | ✗ |
@@ -208,7 +208,7 @@
    - Only `admin` can manage users and moderate reviews
 
 2. **Property Constraints:**
-   - `listingStatus` can only change via seller/admin
+   - `listingStatus` can only change via seller/admin and includes `delisted` for owner-controlled feed visibility
    - Cannot delete property if appointments are pending/confirmed
    - Images should be validated on upload (max 5MB per image)
 
@@ -218,18 +218,21 @@
 
 4. **Inquiry Constraints:**
    - `senderUserId` must be different from `agentId`
-   - Inquiry cannot be deleted, only status-changed
+   - Agent/admin can edit or clear inquiry response content
+   - Buyer can delete inquiry after reply; admin can override for moderation
    - Cannot create inquiry for own property
 
 5. **Appointment Constraints:**
    - Date must be future date (> today)
    - Cannot book same slot twice (unique: propertyId + date + time)
    - `appointmentStatus` transitions: pending → confirmed/cancelled → completed
+   - Delete behavior uses dual soft-delete semantics for buyer and agent perspectives
 
 6. **Review Constraints:**
    - User cannot review same property/agent twice
    - Can only review if user has purchased/visited property or interacted with agent
    - Rating is required; comment is optional
+   - Review owner can edit rating/comment, with admin moderation control
 
 7. **Notification Constraints:**
    - Auto-delete after 30 days

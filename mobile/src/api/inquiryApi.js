@@ -12,23 +12,35 @@ export const inquiryApi = {
     return apiClient.get("/inquiries/me");
   },
 
-  // Get all inquiries for a property (for sellers/agents)
-  getPropertyInquiries: async (propertyId) => {
-    return apiClient.get(`/inquiries/property/${propertyId}`);
-  },
-
-  // Get single inquiry details
-  getInquiry: async (inquiryId) => {
-    return apiClient.get(`/inquiries/${inquiryId}`);
-  },
-
   // Update inquiry (change status or message)
   updateInquiry: async (inquiryId, data) => {
     return apiClient.patch(`/inquiries/${inquiryId}`, data);
   },
 
+  // Update sender-managed inquiry fields (subject/message/contact)
+  updateInquiryDetails: async (inquiryId, data) => {
+    return apiClient.patch(`/inquiries/${inquiryId}`, data);
+  },
+
+  // Create or edit agent/admin response message
+  saveInquiryResponse: async (inquiryId, responseMessage) => {
+    return apiClient.patch(`/inquiries/${inquiryId}`, {
+      responseMessage
+    });
+  },
+
+  // Clear agent/admin response message from inquiry
+  clearInquiryResponse: async (inquiryId) => {
+    return apiClient.delete(`/inquiries/${inquiryId}/response`);
+  },
+
   // Delete inquiry
   deleteInquiry: async (inquiryId) => {
+    return apiClient.delete(`/inquiries/${inquiryId}`);
+  },
+
+  // Convenience alias for inquiry deletion
+  removeInquiry: async (inquiryId) => {
     return apiClient.delete(`/inquiries/${inquiryId}`);
   }
 };

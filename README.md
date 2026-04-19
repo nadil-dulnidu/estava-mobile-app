@@ -48,6 +48,15 @@ Health check: `GET /api/health`
 - `POST /api/auth/register`
 - `POST /api/auth/login`
 
+## Current Module Behavior (Phase 3)
+
+- Properties support CRUD with owner/admin guardrails. `listingStatus` values are `available`, `sold`, `rented`, and `delisted`.
+- Delisted properties are excluded from the public feed and remain manageable by owners/admins.
+- Inquiries support CRUD with agent response edit/clear behavior and buyer delete-after-reply handling.
+- Appointments support update flows and dual soft-delete semantics for buyer and agent views.
+- Reviews support create/edit/delete flows, and property detail displays average review rating.
+- Property, inquiry, and appointment modules include stricter authorization and validation hardening.
+
 ## Mobile Setup
 
 1. Open a terminal in `mobile/`
@@ -86,6 +95,6 @@ Notes:
 ## Next Build Steps
 
 1. Add role-aware `GET /api/auth/me` and profile management.
-2. Implement Property Management module first.
-3. Add shared validation layer and consistent response schema for all modules.
-4. Add tests per module owner (API + mobile integration).
+2. Add integration tests for CRUD flows and role-restricted update/delete paths.
+3. Expand mobile UX for loading, empty, and error states across all module screens.
+4. Finalize staging/production deployment validation for hosted backend + mobile connectivity.

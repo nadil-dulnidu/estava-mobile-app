@@ -12,19 +12,19 @@ export const appointmentApi = {
     return apiClient.get("/appointments/me");
   },
 
-  // Get single appointment details
-  getAppointment: async (appointmentId) => {
-    return apiClient.get(`/appointments/${appointmentId}`);
-  },
-
   // Update appointment (reschedule or change status)
   updateAppointment: async (appointmentId, data) => {
     return apiClient.patch(`/appointments/${appointmentId}`, data);
   },
 
-  // Cancel appointment
+  // Update appointment status to cancelled.
   cancelAppointment: async (appointmentId) => {
     return apiClient.patch(`/appointments/${appointmentId}`, { appointmentStatus: "cancelled" });
+  },
+
+  // Hide appointment from caller side (soft delete).
+  softDeleteAppointment: async (appointmentId) => {
+    return apiClient.delete(`/appointments/${appointmentId}`);
   }
 };
 

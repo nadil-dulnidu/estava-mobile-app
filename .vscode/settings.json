@@ -1,0 +1,13 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "Delete": true,
+        "Edit": true,
+        "Clear": true,
+        "Hide": true,
+        "updateReview\\": true,
+        "Average:": true,
+        "inputLabel": true,
+        "Listing": true,
+        "Land": true
+    }
+}

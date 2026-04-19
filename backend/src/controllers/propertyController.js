@@ -4,12 +4,15 @@ const { successResponse } = require("../utils/apiResponse");
 const {
   coerceStringList,
   coerceFeatureList,
+  validatePropertyIdParam,
   validateCreatePropertyInput,
-  validateUpdatePropertyInput
+  validateUpdatePropertyInput,
+  validateListPropertiesQuery
 } = require("../validators/propertyValidator");
 const {
   createProperty,
   listProperties,
+  listMyProperties,
   getPropertyById,
   updateProperty,
   deleteProperty
@@ -54,16 +57,25 @@ const create = catchAsync(async (req, res) => {
 });
 
 const list = catchAsync(async (req, res) => {
+  validateListPropertiesQuery(req.query);
   const result = await listProperties(req.query);
   return successResponse(res, result, "Properties fetched successfully", 200);
 });
 
+const listMine = catchAsync(async (req, res) => {
+  validateListPropertiesQuery(req.query, { allowDelistedStatusFilter: true });
+  const result = await listMyProperties(req.query, req.user._id);
+  return successResponse(res, result, "Your properties fetched successfully", 200);
+});
+
 const getById = catchAsync(async (req, res) => {
-  const property = await getPropertyById(req.params.id);
+  validatePropertyIdParam(req.params.id);
+  const property = await getPropertyById(req.params.id, req.user);
   return successResponse(res, property, "Property fetched successfully", 200);
 });
 
 const update = catchAsync(async (req, res) => {
+  validatePropertyIdParam(req.params.id);
   const payload = normalizePayload(req.body);
   validateUpdatePropertyInput(payload, {
     allowEmptyPayload: !!(req.files && req.files.length > 0)
@@ -76,6 +88,7 @@ const update = catchAsync(async (req, res) => {
 });
 
 const remove = catchAsync(async (req, res) => {
+  validatePropertyIdParam(req.params.id);
   await deleteProperty(req.params.id, req.user);
   return successResponse(res, null, "Property deleted successfully", 200);
 });
@@ -83,6 +96,7 @@ const remove = catchAsync(async (req, res) => {
 module.exports = {
   create,
   list,
+  listMine,
   getById,
   update,
   remove

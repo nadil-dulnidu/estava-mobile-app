@@ -19,12 +19,18 @@ export default function ReviewsScreen() {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [submitError, setSubmitError] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
   const [propertySelectMode, setPropertySelectMode] = useState(false);
   const [properties, setProperties] = useState([]);
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [rating, setRating] = useState("5");
   const [comment, setComment] = useState("");
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingReview, setEditingReview] = useState(null);
+  const [editRating, setEditRating] = useState("5");
+  const [editComment, setEditComment] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
     loadReviews();
@@ -38,7 +44,7 @@ export default function ReviewsScreen() {
       const res = await reviewApi.getMyReviews();
       setReviews(res.data.data || []);
     } catch (err) {
-      setError(err.message || "Failed to load reviews");
+      setError(err.response?.data?.message || err.message || "Failed to load reviews");
     } finally {
       setLoading(false);
     }
@@ -55,18 +61,21 @@ export default function ReviewsScreen() {
   };
 
   const onSubmitReview = async () => {
+    setSubmitError("");
+
     if (!selectedProperty) {
-      setError("Please select a property");
+      setSubmitError("Please select a property");
       return;
     }
     if (!comment.trim()) {
-      setError("Comment cannot be empty");
+      setSubmitError("Comment cannot be empty");
       return;
     }
+
     try {
       await reviewApi.submitReview({
         propertyId: selectedProperty._id,
-        rating: parseInt(rating),
+        rating: parseInt(rating, 10),
         comment
       });
       setModalVisible(false);
@@ -74,10 +83,48 @@ export default function ReviewsScreen() {
       setRating("5");
       setComment("");
       setSelectedProperty(null);
-      setError("");
+      setSubmitError("");
       loadReviews();
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to submit review");
+      setSubmitError(err.response?.data?.message || "Failed to submit review");
+    }
+  };
+
+  const onOpenEditReview = (review) => {
+    setEditingReview(review);
+    setEditRating(String(review?.rating || 5));
+    setEditComment(review?.comment || "");
+    setSubmitError("");
+    setEditModalVisible(true);
+  };
+
+  const onUpdateReview = async () => {
+    if (!editingReview) {
+      return;
+    }
+
+    setSubmitError("");
+    if (!editComment.trim()) {
+      setSubmitError("Comment cannot be empty");
+      return;
+    }
+
+    setSavingEdit(true);
+    try {
+      await reviewApi.updateReview(editingReview._id, {
+        rating: parseInt(editRating, 10),
+        comment: editComment.trim()
+      });
+      setEditModalVisible(false);
+      setEditingReview(null);
+      setEditRating("5");
+      setEditComment("");
+      setSubmitError("");
+      loadReviews();
+    } catch (err) {
+      setSubmitError(err.response?.data?.message || "Failed to update review");
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -107,7 +154,17 @@ export default function ReviewsScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>My Reviews</Text>
       {!!error && <Text style={styles.error}>{error}</Text>}
-      <Pressable style={styles.addButton} onPress={() => setModalVisible(true)}>
+      <Pressable
+        style={styles.addButton}
+        onPress={() => {
+          setModalVisible(true);
+          setPropertySelectMode(false);
+          setSelectedProperty(null);
+          setRating("5");
+          setComment("");
+          setSubmitError("");
+        }}
+      >
         <Text style={styles.addButtonText}>+ Add Review</Text>
       </Pressable>
 
@@ -125,9 +182,14 @@ export default function ReviewsScreen() {
               <Text style={styles.stars}>{renderStars(item.rating)}</Text>
               <Text style={styles.comment}>{item.comment}</Text>
               <Text style={styles.date}>{new Date(item.createdAt).toLocaleDateString()}</Text>
-              <Pressable style={styles.deleteButton} onPress={() => onDeleteReview(item._id)}>
-                <Text style={styles.deleteButtonText}>Delete</Text>
-              </Pressable>
+              <View style={styles.cardActions}>
+                <Pressable style={styles.editButton} onPress={() => onOpenEditReview(item)}>
+                  <Text style={styles.editButtonText}>Edit</Text>
+                </Pressable>
+                <Pressable style={styles.deleteButton} onPress={() => onDeleteReview(item._id)}>
+                  <Text style={styles.deleteButtonText}>Delete</Text>
+                </Pressable>
+              </View>
             </View>
           )}
         />
@@ -161,7 +223,9 @@ export default function ReviewsScreen() {
                 <View style={styles.modalButtons}>
                   <Pressable style={styles.cancelBtn} onPress={() => {
                     setModalVisible(false);
+                    setPropertySelectMode(false);
                     setSelectedProperty(null);
+                    setSubmitError("");
                   }}>
                     <Text style={styles.cancelText}>Cancel</Text>
                   </Pressable>
@@ -177,13 +241,13 @@ export default function ReviewsScreen() {
             ) : (
               <>
                 <Text style={styles.modalTitle}>Review: {selectedProperty?.title}</Text>
-                {!!error && <Text style={styles.error}>{error}</Text>}
+                {!!submitError && <Text style={styles.error}>{submitError}</Text>}
                 <View style={styles.ratingContainer}>
                   {[1, 2, 3, 4, 5].map((star) => (
                     <Pressable
                       key={star}
                       onPress={() => setRating(star.toString())}
-                      style={[styles.starButton, star <= parseInt(rating) && styles.starSelected]}
+                      style={[styles.starButton, star <= parseInt(rating, 10) && styles.starSelected]}
                     >
                       <Text style={styles.starText}>⭐</Text>
                     </Pressable>
@@ -198,7 +262,13 @@ export default function ReviewsScreen() {
                   onChangeText={setComment}
                 />
                 <View style={styles.modalButtons}>
-                  <Pressable style={styles.cancelBtn} onPress={() => setPropertySelectMode(false)}>
+                  <Pressable
+                    style={styles.cancelBtn}
+                    onPress={() => {
+                      setPropertySelectMode(false);
+                      setSubmitError("");
+                    }}
+                  >
                     <Text style={styles.cancelText}>Back</Text>
                   </Pressable>
                   <Pressable style={styles.submitBtn} onPress={onSubmitReview}>
@@ -207,6 +277,56 @@ export default function ReviewsScreen() {
                 </View>
               </>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={editModalVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Edit Review</Text>
+            {!!submitError && <Text style={styles.error}>{submitError}</Text>}
+
+            <View style={styles.ratingContainer}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Pressable
+                  key={star}
+                  onPress={() => setEditRating(star.toString())}
+                  style={[styles.starButton, star <= parseInt(editRating, 10) && styles.starSelected]}
+                >
+                  <Text style={styles.starText}>⭐</Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Update your comment..."
+              multiline
+              numberOfLines={4}
+              value={editComment}
+              onChangeText={setEditComment}
+            />
+
+            <View style={styles.modalButtons}>
+              <Pressable
+                style={styles.cancelBtn}
+                onPress={() => {
+                  setEditModalVisible(false);
+                  setEditingReview(null);
+                  setSubmitError("");
+                }}
+              >
+                <Text style={styles.cancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.submitBtn, savingEdit && styles.submitBtnDisabled]}
+                onPress={onUpdateReview}
+                disabled={savingEdit}
+              >
+                <Text style={styles.submitText}>{savingEdit ? "Saving..." : "Save"}</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </Modal>
@@ -237,7 +357,10 @@ const styles = StyleSheet.create({
   stars: { fontSize: 16, marginTop: 6 },
   comment: { fontSize: 14, color: "#374151", marginTop: 6 },
   date: { fontSize: 12, color: "#9ca3af", marginTop: 6 },
-  deleteButton: { marginTop: 8, alignSelf: "flex-start" },
+  cardActions: { marginTop: 8, flexDirection: "row", gap: 14 },
+  editButton: { paddingVertical: 2, paddingHorizontal: 2 },
+  editButtonText: { color: "#1d4ed8", fontWeight: "700", fontSize: 12 },
+  deleteButton: { paddingVertical: 2, paddingHorizontal: 2 },
   deleteButtonText: { color: "#b91c1c", fontWeight: "700", fontSize: 12 },
   modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.3)" },
   modalContent: { backgroundColor: "#fff", padding: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16, maxHeight: "85%" },

@@ -1,6 +1,8 @@
 // Review API client for property and agent ratings
 import apiClient from "./client";
 
+const unwrapData = (response) => response?.data?.data;
+
 export const reviewApi = {
   // Submit review and rating for property or agent
   submitReview: async (data) => {
@@ -9,7 +11,8 @@ export const reviewApi = {
 
   // Get all reviews for a property
   getPropertyReviews: async (propertyId) => {
-    return apiClient.get(`/reviews/property/${propertyId}`);
+    const response = await apiClient.get(`/reviews/property/${propertyId}`);
+    return unwrapData(response);
   },
 
   // Get all reviews for an agent
