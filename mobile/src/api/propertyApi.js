@@ -11,6 +11,11 @@ export async function getPropertyById(id) {
   return response.data?.data;
 }
 
+export async function getMyProperties(params = {}) {
+  const response = await apiClient.get("/properties/mine", { params });
+  return response.data?.data;
+}
+
 export async function createProperty(payload) {
   const response = await apiClient.post("/properties", payload);
   return response.data?.data;

@@ -24,12 +24,19 @@ const resolveUserId = (userRef) => {
   return userRef._id || userRef.id || "";
 };
 
+const toSafeString = (value) => {
+  if (typeof value === "string") return value;
+  if (value === null || value === undefined) return "";
+  return String(value);
+};
+
 const hasResponseMessage = (inquiry) => {
-  return Boolean((inquiry?.responseMessage || "").trim());
+  return Boolean(toSafeString(inquiry?.responseMessage).trim());
 };
 
 const getInquiryStatus = (inquiry) => {
-  return (inquiry?.inquiryStatus || inquiry?.status || "pending").toLowerCase();
+  const normalizedStatus = toSafeString(inquiry?.inquiryStatus || inquiry?.status).trim().toLowerCase();
+  return normalizedStatus || "pending";
 };
 
 const getStatusColor = (status) => {
@@ -39,8 +46,9 @@ const getStatusColor = (status) => {
 };
 
 const toStatusLabel = (status) => {
-  if (!status) return "Pending";
-  return `${status.charAt(0).toUpperCase()}${status.slice(1)}`;
+  const normalizedStatus = toSafeString(status).trim();
+  if (!normalizedStatus) return "Pending";
+  return `${normalizedStatus.charAt(0).toUpperCase()}${normalizedStatus.slice(1)}`;
 };
 
 export default function InquiriesScreen() {
@@ -83,7 +91,7 @@ export default function InquiriesScreen() {
     const hasResponse = hasResponseMessage(item);
     setResponseInquiry(item);
     setResponseMode(hasResponse ? "edit" : "create");
-    setResponseMessage(item.responseMessage || "");
+    setResponseMessage(toSafeString(item?.responseMessage));
     setError("");
     setResponseModalVisible(true);
   };
@@ -95,7 +103,7 @@ export default function InquiriesScreen() {
   };
 
   const onSaveResponse = async () => {
-    const nextResponse = responseMessage.trim();
+    const nextResponse = toSafeString(responseMessage).trim();
     if (nextResponse.length < 3) {
       setError("Response must be at least 3 characters");
       return;
@@ -140,9 +148,9 @@ export default function InquiriesScreen() {
 
   const openEditInquiryModal = (item) => {
     setEditInquiry(item);
-    setEditSubject(item.subject || "");
-    setEditMessage(item.message || "");
-    setEditContact(item.contactNumber || "");
+    setEditSubject(toSafeString(item?.subject));
+    setEditMessage(toSafeString(item?.message));
+    setEditContact(toSafeString(item?.contactNumber));
     setError("");
     setEditInquiryModalVisible(true);
   };
@@ -156,9 +164,9 @@ export default function InquiriesScreen() {
   };
 
   const onSaveInquiryEdits = async () => {
-    const subject = editSubject.trim();
-    const message = editMessage.trim();
-    const contactNumber = editContact.trim();
+    const subject = toSafeString(editSubject).trim();
+    const message = toSafeString(editMessage).trim();
+    const contactNumber = toSafeString(editContact).trim();
 
     if (subject.length < 3 || subject.length > 160) {
       setError("Subject must be between 3 and 160 characters");
@@ -197,7 +205,7 @@ export default function InquiriesScreen() {
   const onDeleteInquiry = (item) => {
     Alert.alert(
       "Delete inquiry",
-      "This inquiry can be deleted because a seller response exists. Continue?",
+      "Are you sure you want to delete this inquiry?",
       [
         { text: "Cancel", style: "cancel" },
         {

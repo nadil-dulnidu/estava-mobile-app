@@ -35,8 +35,8 @@ const remove = catchAsync(async (req, res) => {
   validateAppointmentIdParam(req.params.id);
   const result = await deleteAppointment(req.params.id, req.user);
   const message = result.hardDeleted
-    ? "Appointment deleted permanently"
-    : "Appointment hidden from your list";
+    ? "Appointment deleted permanently for both buyer and seller"
+    : "Appointment removed from your list";
 
   return successResponse(res, null, message, 200);
 });

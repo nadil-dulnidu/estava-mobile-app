@@ -212,17 +212,39 @@ export default function AppointmentsScreen({ navigation }) {
     );
   };
 
-  const executeSoftDelete = async (appointmentId) => {
+  const executeSoftDelete = async (appointmentId, fallbackMessage = "Failed to delete appointment") => {
     setSoftDeletingId(appointmentId);
     setError("");
     try {
       await appointmentApi.softDeleteAppointment(appointmentId);
       await loadAppointments();
     } catch (err) {
-      setError(getSafeErrorMessage(err, "Failed to hide appointment"));
+      setError(getSafeErrorMessage(err, fallbackMessage));
     } finally {
       setSoftDeletingId("");
     }
+  };
+
+  const confirmDeleteCompleted = (appointment) => {
+    const status = normalizeStatus(appointment?.appointmentStatus || appointment?.status);
+    if (status !== "completed") {
+      return;
+    }
+
+    Alert.alert(
+      "Delete Appointment",
+      "Are you sure you want to delete this completed appointment from your list?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            void executeSoftDelete(appointment._id, "Failed to delete appointment");
+          }
+        }
+      ]
+    );
   };
 
   const confirmSoftDelete = (appointment) => {
@@ -241,7 +263,7 @@ export default function AppointmentsScreen({ navigation }) {
           text: "Hide from My List",
           style: "destructive",
           onPress: () => {
-            void executeSoftDelete(appointment._id);
+            void executeSoftDelete(appointment._id, "Failed to hide appointment");
           }
         }
       ]
@@ -269,6 +291,7 @@ export default function AppointmentsScreen({ navigation }) {
               {(() => {
                 const status = normalizeStatus(item?.appointmentStatus || item?.status);
                 const isCancelled = status === "cancelled";
+                const isCompleted = status === "completed";
                 return (
                   <>
                     <Text style={styles.property}>{item?.propertyId?.title || "Property"}</Text>
@@ -279,30 +302,50 @@ export default function AppointmentsScreen({ navigation }) {
                     </Text>
 
                     <View style={styles.actionRow}>
-                      <Pressable style={styles.editButton} onPress={() => openEditModal(item)}>
-                        <Text style={styles.editButtonText}>Edit</Text>
-                      </Pressable>
-
-                      {!isCancelled ? (
-                        <Pressable style={styles.cancelButton} onPress={() => confirmCancel(item)}>
-                          <Text style={styles.cancelText}>Mark Cancelled</Text>
-                        </Pressable>
-                      ) : (
+                      {isCompleted ? (
                         <Pressable
-                          style={styles.hideButton}
-                          onPress={() => confirmSoftDelete(item)}
+                          style={styles.deleteButton}
+                          onPress={() => confirmDeleteCompleted(item)}
                           disabled={softDeletingId === item?._id}
                         >
-                          <Text style={styles.hideText}>
-                            {softDeletingId === item?._id ? "Hiding..." : "Hide from My List"}
+                          <Text style={styles.deleteText}>
+                            {softDeletingId === item?._id ? "Deleting..." : "Delete Appointment"}
                           </Text>
                         </Pressable>
+                      ) : (
+                        <>
+                          <Pressable style={styles.editButton} onPress={() => openEditModal(item)}>
+                            <Text style={styles.editButtonText}>Edit</Text>
+                          </Pressable>
+
+                          {!isCancelled ? (
+                            <Pressable style={styles.cancelButton} onPress={() => confirmCancel(item)}>
+                              <Text style={styles.cancelText}>Mark Cancelled</Text>
+                            </Pressable>
+                          ) : (
+                            <Pressable
+                              style={styles.hideButton}
+                              onPress={() => confirmSoftDelete(item)}
+                              disabled={softDeletingId === item?._id}
+                            >
+                              <Text style={styles.hideText}>
+                                {softDeletingId === item?._id ? "Hiding..." : "Hide from My List"}
+                              </Text>
+                            </Pressable>
+                          )}
+                        </>
                       )}
                     </View>
 
                     {isCancelled && (
                       <Text style={styles.noteText}>
                         Hide from My List only removes this cancelled appointment from your view.
+                      </Text>
+                    )}
+
+                    {isCompleted && (
+                      <Text style={styles.noteText}>
+                        Delete Appointment removes this completed appointment from your view.
                       </Text>
                     )}
                   </>
@@ -452,6 +495,14 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   hideText: { color: "#92400e", fontWeight: "700" },
+  deleteButton: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: "#fee2e2",
+    alignItems: "center"
+  },
+  deleteText: { color: "#b91c1c", fontWeight: "700" },
   noteText: {
     marginTop: 8,
     fontSize: 12,

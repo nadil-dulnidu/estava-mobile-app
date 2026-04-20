@@ -11,6 +11,18 @@ const SELLER_ALLOWED_STATUS_TRANSITIONS = {
   cancelled: []
 };
 
+const DELETABLE_APPOINTMENT_STATUSES = ["cancelled", "completed"];
+const TERMINAL_APPOINTMENT_STATUSES = ["completed", "cancelled"];
+
+const normalizeAppointmentStatus = (statusValue) =>
+  typeof statusValue === "string" ? statusValue.trim().toLowerCase() : "";
+
+const resolveAppointmentStatus = (appointment) =>
+  normalizeAppointmentStatus(
+    appointment.appointmentStatus ??
+      (typeof appointment.get === "function" ? appointment.get("status") : appointment.status)
+  );
+
 const isBuyerForAppointment = (appointment, userId) =>
   appointment.userId.toString() === userId.toString();
 
@@ -101,8 +113,21 @@ const updateAppointment = async (appointmentId, payload, user) => {
     throw new AppError("Appointment is hidden for seller and cannot be updated", 400);
   }
 
-  const nextStatus = payload.appointmentStatus !== undefined ? payload.appointmentStatus : payload.status;
-  const currentStatus = appointment.appointmentStatus;
+  const rawNextStatus =
+    payload.appointmentStatus !== undefined ? payload.appointmentStatus : payload.status;
+  const nextStatus =
+    rawNextStatus !== undefined ? normalizeAppointmentStatus(rawNextStatus) : undefined;
+  const currentStatus = resolveAppointmentStatus(appointment);
+  const hasDateOrTimeUpdate = payload.date !== undefined || payload.time !== undefined;
+  const resultingStatus = nextStatus !== undefined ? nextStatus : currentStatus;
+
+  if (
+    !isAdmin &&
+    hasDateOrTimeUpdate &&
+    TERMINAL_APPOINTMENT_STATUSES.includes(resultingStatus)
+  ) {
+    throw new AppError("Date or time cannot be updated for completed or cancelled appointments", 400);
+  }
 
   if (nextStatus !== undefined && nextStatus !== currentStatus) {
     if (isAdmin) {
@@ -156,8 +181,10 @@ const deleteAppointment = async (appointmentId, user) => {
     throw new AppError("You can only delete appointments you are part of", 403);
   }
 
-  if (appointment.appointmentStatus !== "cancelled") {
-    throw new AppError("Only cancelled appointments can be deleted", 400);
+  const deletionStatus = resolveAppointmentStatus(appointment);
+
+  if (!DELETABLE_APPOINTMENT_STATUSES.includes(deletionStatus)) {
+    throw new AppError("Only cancelled or completed appointments can be deleted", 400);
   }
 
   if (!isAdmin && isBuyer && appointment.isDeletedByBuyer) {

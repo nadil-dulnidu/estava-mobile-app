@@ -119,20 +119,29 @@ export default function PropertyDetailScreen({ route, navigation }) {
 
   useEffect(() => {
     const load = async () => {
+      let shouldLoadReviews = false;
+
       try {
         setError("");
         const result = await getPropertyById(propertyId);
         setProperty(result);
         await syncFavoriteState(result?._id || propertyId);
+        shouldLoadReviews = true;
       } catch (fetchError) {
+        setProperty(null);
         setFavoriteId("");
         setIsFavorite(false);
+        setReviews([]);
+        setReviewStats({ avgRating: 0, total: 0 });
+        setReviewsError("");
         setError(fetchError?.response?.data?.message || "Failed to load property details");
       } finally {
         setLoading(false);
       }
 
-      await loadPropertyReviews();
+      if (shouldLoadReviews) {
+        await loadPropertyReviews();
+      }
     };
 
     load();
@@ -377,6 +386,20 @@ export default function PropertyDetailScreen({ route, navigation }) {
       ) : null}
 
       <Text style={styles.sectionTitle}>Reviews</Text>
+      <Pressable
+        style={styles.reviewShortcutButton}
+        onPress={() =>
+          navigation.navigate("Reviews", {
+            preselectedProperty: {
+              _id: property._id,
+              title: property.title,
+              price: property.price
+            }
+          })
+        }
+      >
+        <Text style={styles.reviewShortcutButtonText}>Review this property</Text>
+      </Pressable>
       <Text style={styles.reviewSummary}>
         Average: {reviewStats.avgRating.toFixed(1)} / 5 ({reviewStats.total} review
         {reviewStats.total === 1 ? "" : "s"})
@@ -628,6 +651,18 @@ const styles = StyleSheet.create({
     color: "#1f2937",
     fontWeight: "600",
     marginBottom: 10
+  },
+  reviewShortcutButton: {
+    alignSelf: "flex-start",
+    backgroundColor: "#1d4ed8",
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 10
+  },
+  reviewShortcutButtonText: {
+    color: "#ffffff",
+    fontWeight: "700"
   },
   reviewCard: {
     backgroundColor: "#ffffff",

@@ -15,7 +15,7 @@ import {
 import { reviewApi } from "../api/reviewApi";
 import { getProperties } from "../api/propertyApi";
 
-export default function ReviewsScreen() {
+export default function ReviewsScreen({ route, navigation }) {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -32,10 +32,30 @@ export default function ReviewsScreen() {
   const [editComment, setEditComment] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
 
+  const preselectedProperty = route?.params?.preselectedProperty;
+
   useEffect(() => {
     loadReviews();
     loadProperties();
   }, []);
+
+  useEffect(() => {
+    if (!preselectedProperty?._id) {
+      return;
+    }
+
+    setSelectedProperty({
+      _id: preselectedProperty._id,
+      title: preselectedProperty.title || "Selected Property",
+      price: Number(preselectedProperty.price || 0)
+    });
+    setModalVisible(true);
+    setPropertySelectMode(true);
+    setRating("5");
+    setComment("");
+    setSubmitError("");
+    navigation.setParams({ preselectedProperty: undefined });
+  }, [navigation, preselectedProperty]);
 
   const loadReviews = async () => {
     setLoading(true);
@@ -266,6 +286,7 @@ export default function ReviewsScreen() {
                     style={styles.cancelBtn}
                     onPress={() => {
                       setPropertySelectMode(false);
+                      setSelectedProperty(null);
                       setSubmitError("");
                     }}
                   >

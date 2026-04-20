@@ -9,13 +9,35 @@ import {
   ActivityIndicator,
   RefreshControl
 } from "react-native";
-import { getProperties } from "../api/propertyApi";
+import { getMyProperties, getProperties } from "../api/propertyApi";
+import { useAuth } from "../context/AuthContext";
+
+const resolveUserId = (entity) => {
+  if (!entity) return "";
+  if (typeof entity === "string") return entity;
+  return entity._id || entity.id || "";
+};
+
+const dedupeProperties = (items) => {
+  const map = new Map();
+
+  items.forEach((item) => {
+    const key = item?._id;
+    if (!key) return;
+    map.set(String(key), item);
+  });
+
+  return Array.from(map.values());
+};
 
 export default function PropertyListScreen({ navigation }) {
+  const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+
+  const currentUserId = resolveUserId(user);
 
   const fetchProperties = useCallback(async (isRefresh = false) => {
     if (isRefresh) {
@@ -26,8 +48,26 @@ export default function PropertyListScreen({ navigation }) {
 
     try {
       setError("");
-      const result = await getProperties({ page: 1, limit: 20 });
-      const visibleItems = (result?.items || []).filter((item) => item?.listingStatus !== "delisted");
+      const [publicResult, mineResult] = await Promise.all([
+        getProperties({ page: 1, limit: 20 }),
+        getMyProperties({ page: 1, limit: 20 }).catch(() => ({ items: [] }))
+      ]);
+
+      const mergedItems = dedupeProperties([
+        ...(publicResult?.items || []),
+        ...(mineResult?.items || [])
+      ]);
+
+      const visibleItems = mergedItems.filter((item) => {
+        const listingStatus = String(item?.listingStatus || "").toLowerCase();
+        if (listingStatus !== "delisted") {
+          return true;
+        }
+
+        const ownerId = resolveUserId(item?.createdBy);
+        return Boolean(ownerId) && String(ownerId) === String(currentUserId);
+      });
+
       setItems(visibleItems);
     } catch (fetchError) {
       setError(fetchError?.response?.data?.message || "Failed to load properties");
@@ -35,7 +75,7 @@ export default function PropertyListScreen({ navigation }) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [currentUserId]);
 
   useEffect(() => {
     fetchProperties();
@@ -64,6 +104,9 @@ export default function PropertyListScreen({ navigation }) {
   return (
     <View style={styles.container}>
       {error ? <Text style={styles.error}>{error}</Text> : null}
+      <Pressable style={styles.postOwnButton} onPress={() => navigation.navigate("CreateProperty")}>
+        <Text style={styles.postOwnButtonText}>Post your own property</Text>
+      </Pressable>
       <FlatList
         data={items}
         keyExtractor={(item) => item._id}
@@ -124,5 +167,18 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 16,
     color: "#b91c1c"
+  },
+  postOwnButton: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 2,
+    backgroundColor: "#1d4ed8",
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: "center"
+  },
+  postOwnButtonText: {
+    color: "#ffffff",
+    fontWeight: "700"
   }
 });

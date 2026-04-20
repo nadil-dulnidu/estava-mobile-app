@@ -12,6 +12,61 @@ import {
 } from "react-native";
 import { createProperty } from "../api/propertyApi";
 
+const MAX_FEATURES = 20;
+const MAX_FEATURE_LENGTH = 50;
+
+const parseNonNegativeNumber = (value, options = {}) => {
+  const { required = false, defaultValue = 0 } = options;
+  const normalized = String(value ?? "").trim();
+
+  if (!normalized) {
+    return { isValid: !required, value: defaultValue };
+  }
+
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return { isValid: false, value: defaultValue };
+  }
+
+  return { isValid: true, value: parsed };
+};
+
+const parseFeaturesInput = (value) => {
+  const rawFeatures = String(value ?? "")
+    .split(",")
+    .map((feature) => feature.trim())
+    .filter(Boolean);
+
+  const dedupedFeatures = [];
+  const seenNormalized = new Set();
+
+  for (const feature of rawFeatures) {
+    if (feature.length > MAX_FEATURE_LENGTH) {
+      return {
+        features: [],
+        error: `Each feature must be ${MAX_FEATURE_LENGTH} characters or less.`
+      };
+    }
+
+    const normalizedKey = feature.toLowerCase();
+    if (seenNormalized.has(normalizedKey)) {
+      continue;
+    }
+
+    seenNormalized.add(normalizedKey);
+    dedupedFeatures.push(feature);
+
+    if (dedupedFeatures.length > MAX_FEATURES) {
+      return {
+        features: [],
+        error: `Please provide up to ${MAX_FEATURES} features.`
+      };
+    }
+  }
+
+  return { features: dedupedFeatures, error: "" };
+};
+
 export default function CreatePropertyScreen({ navigation }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -22,6 +77,7 @@ export default function CreatePropertyScreen({ navigation }) {
   const [bedrooms, setBedrooms] = useState("");
   const [bathrooms, setBathrooms] = useState("");
   const [areaSize, setAreaSize] = useState("");
+  const [featuresText, setFeaturesText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -33,8 +89,33 @@ export default function CreatePropertyScreen({ navigation }) {
       return;
     }
 
-    if (!price.trim() || Number(price) <= 0) {
-      setError("Please enter a valid price.");
+    const parsedPrice = parseNonNegativeNumber(price, { required: true });
+    if (!parsedPrice.isValid) {
+      setError("Please enter a valid non-negative price.");
+      return;
+    }
+
+    const parsedBedrooms = parseNonNegativeNumber(bedrooms);
+    if (!parsedBedrooms.isValid) {
+      setError("Bedrooms must be a non-negative number.");
+      return;
+    }
+
+    const parsedBathrooms = parseNonNegativeNumber(bathrooms);
+    if (!parsedBathrooms.isValid) {
+      setError("Bathrooms must be a non-negative number.");
+      return;
+    }
+
+    const parsedAreaSize = parseNonNegativeNumber(areaSize);
+    if (!parsedAreaSize.isValid) {
+      setError("Area size must be a non-negative number.");
+      return;
+    }
+
+    const { features, error: featuresError } = parseFeaturesInput(featuresText);
+    if (featuresError) {
+      setError(featuresError);
       return;
     }
 
@@ -44,13 +125,13 @@ export default function CreatePropertyScreen({ navigation }) {
         title: title.trim(),
         description: description.trim(),
         location: location.trim(),
-        price: Number(price),
+        price: parsedPrice.value,
         propertyType,
         listingStatus,
-        bedrooms: Number(bedrooms || 0),
-        bathrooms: Number(bathrooms || 0),
-        areaSize: Number(areaSize || 0),
-        features: []
+        bedrooms: parsedBedrooms.value,
+        bathrooms: parsedBathrooms.value,
+        areaSize: parsedAreaSize.value,
+        features
       });
 
       Alert.alert("Success", "Property posted successfully", [
@@ -161,6 +242,14 @@ export default function CreatePropertyScreen({ navigation }) {
         keyboardType="numeric"
         value={areaSize}
         onChangeText={setAreaSize}
+      />
+
+      <Text style={styles.inputLabel}>Features (comma-separated)</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="e.g. Parking, Garden, Balcony"
+        value={featuresText}
+        onChangeText={setFeaturesText}
       />
 
       <Pressable style={styles.submitButton} onPress={onSubmit} disabled={submitting}>

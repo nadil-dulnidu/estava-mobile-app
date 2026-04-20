@@ -50,11 +50,12 @@ Health check: `GET /api/health`
 
 ## Current Module Behavior (Phase 3)
 
-- Properties support CRUD with owner/admin guardrails. `listingStatus` values are `available`, `sold`, `rented`, and `delisted`.
-- Delisted properties are excluded from the public feed and remain manageable by owners/admins.
-- Inquiries support CRUD with agent response edit/clear behavior and buyer delete-after-reply handling.
-- Appointments support update flows and dual soft-delete semantics for buyer and agent views.
-- Reviews support create/edit/delete flows, and property detail displays average review rating.
+- Properties support CRUD with owner/admin guardrails and `listingStatus` values `available`, `sold`, `rented`, and `delisted`.
+- Delisted properties are hidden from buyer/public views, while owners can still view and manage their own delisted listings.
+- Property creation supports `features` input, and the properties screen includes a top "Post Property" CTA.
+- Inquiries support CRUD with agent response edit/clear behavior and buyer delete-after-reply handling, with professional delete confirmation copy in mobile UI.
+- Appointments support update flows and actor-scoped soft-delete behavior, including delete eligibility for completed appointments.
+- Reviews support create/edit/delete flows; property detail displays average rating and provides a "Review this property" shortcut with preselected property in reviews.
 - Property, inquiry, and appointment modules include stricter authorization and validation hardening.
 
 ## Mobile Setup
