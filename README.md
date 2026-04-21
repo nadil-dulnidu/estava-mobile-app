@@ -55,6 +55,7 @@ Health check: `GET /api/health`
 - Property creation supports `features` input, and the properties screen includes a top "Post Property" CTA.
 - Inquiries support CRUD with agent response edit/clear behavior and buyer delete-after-reply handling, with professional delete confirmation copy in mobile UI.
 - Appointments support update flows and actor-scoped soft-delete behavior, including delete eligibility for completed appointments.
+- Favorites support note editing (update in CRUD) from the mobile UI using the existing favorites PATCH endpoint.
 - Reviews support create/edit/delete flows; property detail displays average rating and provides a "Review this property" shortcut with preselected property in reviews.
 - Property, inquiry, and appointment modules include stricter authorization and validation hardening.
 

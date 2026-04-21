@@ -17,9 +17,9 @@ export const favoriteApi = {
     return apiClient.delete(`/favorites/${favoriteId}`);
   },
 
-  // Update favorite note or priority
-  updateFavorite: async (favoriteId, data) => {
-    return apiClient.patch(`/favorites/${favoriteId}`, data);
+  // Convenience helper for note-only updates from Favorites screen
+  updateFavoriteNote: async (favoriteId, note) => {
+    return apiClient.patch(`/favorites/${favoriteId}`, { note });
   }
 };
 
