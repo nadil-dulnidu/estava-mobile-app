@@ -33,6 +33,7 @@ export default function PropertyDetailScreen({ route, navigation }) {
   const [reviewStats, setReviewStats] = useState({ avgRating: 0, total: 0 });
   const [reviewsError, setReviewsError] = useState("");
   const [ownerActionLoading, setOwnerActionLoading] = useState(false);
+  const [favoriteActionLoading, setFavoriteActionLoading] = useState(false);
 
   // Inquiry modal state
   const [inquiryModalVisible, setInquiryModalVisible] = useState(false);
@@ -74,6 +75,14 @@ export default function PropertyDetailScreen({ route, navigation }) {
     const hours = String(value.getHours()).padStart(2, "0");
     const minutes = String(value.getMinutes()).padStart(2, "0");
     return `${hours}:${minutes}`;
+  };
+
+  const getSafeErrorMessage = (fallback, err) => {
+    const message = err?.response?.data?.message;
+    if (typeof message === "string" && message.trim().length > 0) {
+      return message;
+    }
+    return fallback;
   };
 
   const resolveFavoriteIdForProperty = async (targetPropertyId) => {
@@ -192,6 +201,11 @@ export default function PropertyDetailScreen({ route, navigation }) {
   };
 
   const handleAddFavorite = async () => {
+    if (favoriteActionLoading) {
+      return;
+    }
+
+    setFavoriteActionLoading(true);
     try {
       const response = await favoriteApi.addFavorite(propertyId);
       const createdFavoriteId = response?.data?.data?._id || "";
@@ -204,11 +218,18 @@ export default function PropertyDetailScreen({ route, navigation }) {
       }
       Alert.alert("Success", "Added to favorites");
     } catch (err) {
-      Alert.alert("Error", err.response?.data?.message || "Failed to add favorite");
+      Alert.alert("Error", getSafeErrorMessage("Failed to add favorite", err));
+    } finally {
+      setFavoriteActionLoading(false);
     }
   };
 
   const handleRemoveFavorite = async () => {
+    if (favoriteActionLoading) {
+      return;
+    }
+
+    setFavoriteActionLoading(true);
     try {
       let targetFavoriteId = favoriteId;
 
@@ -228,7 +249,9 @@ export default function PropertyDetailScreen({ route, navigation }) {
       setIsFavorite(false);
       Alert.alert("Success", "Removed from favorites");
     } catch (err) {
-      Alert.alert("Error", err.response?.data?.message || "Failed to remove favorite");
+      Alert.alert("Error", getSafeErrorMessage("Failed to remove favorite", err));
+    } finally {
+      setFavoriteActionLoading(false);
     }
   };
 
@@ -343,8 +366,13 @@ export default function PropertyDetailScreen({ route, navigation }) {
       {/* Action Buttons */}
       <View style={styles.actionButtonsContainer}>
         <Pressable
-          style={[styles.actionButton, isFavorite && styles.actionButtonActive]}
+          style={[
+            styles.actionButton,
+            isFavorite && styles.actionButtonActive,
+            favoriteActionLoading && styles.disabledControl
+          ]}
           onPress={isFavorite ? handleRemoveFavorite : handleAddFavorite}
+          disabled={favoriteActionLoading}
         >
           <Text style={styles.actionButtonEmoji}>❤️</Text>
           <Text style={styles.actionButtonLabel}>{isFavorite ? "Favorited" : "Favorite"}</Text>

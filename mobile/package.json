@@ -7,7 +7,10 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "build:android:apk": "eas build --platform android --profile preview",
+    "build:android:aab": "eas build --platform android --profile production",
+    "install:android:latest": "eas build:run --platform android --latest"
   },
   "dependencies": {
     "@react-native-community/datetimepicker": "^8.2.0",
@@ -16,6 +19,7 @@
     "axios": "^1.7.7",
     "expo": "~54.0.33",
     "expo-status-bar": "~3.0.9",
+    "expo-updates": "~29.0.16",
     "react": "19.1.0",
     "react-native": "0.81.5",
     "react-native-safe-area-context": "~5.6.0",

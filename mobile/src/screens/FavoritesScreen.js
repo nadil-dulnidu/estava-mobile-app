@@ -1,5 +1,5 @@
 // Favorites screen for viewing and managing property wishlist
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { View, Text, FlatList, Pressable, StyleSheet, ActivityIndicator, TextInput } from "react-native";
 import { favoriteApi } from "../api/favoriteApi";
 
@@ -28,6 +28,8 @@ export default function FavoritesScreen() {
   const [draftNote, setDraftNote] = useState("");
   const [savingNoteId, setSavingNoteId] = useState("");
   const [removingFavoriteId, setRemovingFavoriteId] = useState("");
+  const savingNoteLocksRef = useRef(new Set());
+  const removingFavoriteLocksRef = useRef(new Set());
 
   useEffect(() => {
     loadFavorites();
@@ -47,24 +49,33 @@ export default function FavoritesScreen() {
   };
 
   const onRemoveFavorite = async (favoriteId) => {
-    if (removingFavoriteId === favoriteId) {
+    const normalizedFavoriteId = String(favoriteId || "").trim();
+    if (!normalizedFavoriteId || removingFavoriteLocksRef.current.has(normalizedFavoriteId)) {
       return;
     }
 
-    setRemovingFavoriteId(favoriteId);
+    removingFavoriteLocksRef.current.add(normalizedFavoriteId);
+    setRemovingFavoriteId(normalizedFavoriteId);
     setError("");
 
     try {
-      await favoriteApi.removeFavorite(favoriteId);
-      setFavorites((currentFavorites) => currentFavorites.filter((favorite) => favorite._id !== favoriteId));
+      await favoriteApi.removeFavorite(normalizedFavoriteId);
+      setFavorites((currentFavorites) =>
+        currentFavorites.filter((favorite) => favorite._id !== normalizedFavoriteId)
+      );
     } catch (err) {
       setError(getSafeErrorMessage(err, "Failed to remove favorite"));
     } finally {
+      removingFavoriteLocksRef.current.delete(normalizedFavoriteId);
       setRemovingFavoriteId("");
     }
   };
 
   const onStartEditNote = (favorite) => {
+    if (savingNoteLocksRef.current.has(favorite._id) || removingFavoriteLocksRef.current.has(favorite._id)) {
+      return;
+    }
+
     setEditingFavoriteId(favorite._id);
     setDraftNote(favorite.note || "");
     setError("");
@@ -76,6 +87,11 @@ export default function FavoritesScreen() {
   };
 
   const onSaveNote = async (favoriteId) => {
+    const normalizedFavoriteId = String(favoriteId || "").trim();
+    if (!normalizedFavoriteId || savingNoteLocksRef.current.has(normalizedFavoriteId)) {
+      return;
+    }
+
     const normalizedNote = draftNote.trim();
 
     if (normalizedNote.length > MAX_NOTE_LENGTH) {
@@ -83,16 +99,17 @@ export default function FavoritesScreen() {
       return;
     }
 
-    setSavingNoteId(favoriteId);
+    savingNoteLocksRef.current.add(normalizedFavoriteId);
+    setSavingNoteId(normalizedFavoriteId);
     setError("");
 
     try {
-      const response = await favoriteApi.updateFavoriteNote(favoriteId, normalizedNote);
+      const response = await favoriteApi.updateFavoriteNote(normalizedFavoriteId, normalizedNote);
       const updatedFavorite = response?.data?.data;
 
       setFavorites((currentFavorites) =>
         currentFavorites.map((favorite) => {
-          if (favorite._id !== favoriteId) return favorite;
+          if (favorite._id !== normalizedFavoriteId) return favorite;
           return {
             ...favorite,
             note: updatedFavorite?.note ?? normalizedNote
@@ -105,6 +122,7 @@ export default function FavoritesScreen() {
     } catch (err) {
       setError(getSafeErrorMessage(err, "Failed to update note"));
     } finally {
+      savingNoteLocksRef.current.delete(normalizedFavoriteId);
       setSavingNoteId("");
     }
   };
@@ -121,65 +139,81 @@ export default function FavoritesScreen() {
         <FlatList
           data={favorites}
           keyExtractor={(item) => item._id}
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              <Text style={styles.propertyTitle}>{item.propertyId?.title || "Property"}</Text>
-              {editingFavoriteId === item._id ? (
-                <>
-                  <TextInput
-                    style={styles.noteInput}
-                    placeholder="Add a note for this favorite"
-                    multiline
-                    numberOfLines={3}
-                    maxLength={MAX_NOTE_LENGTH}
-                    value={draftNote}
-                    onChangeText={setDraftNote}
-                  />
-                  <Text style={styles.noteCount}>{draftNote.length}/{MAX_NOTE_LENGTH}</Text>
-                  <View style={styles.actionRow}>
-                    <Pressable
-                      onPress={() => onSaveNote(item._id)}
-                      style={[styles.actionButton, styles.saveButton]}
-                      disabled={savingNoteId === item._id}
-                    >
-                      {savingNoteId === item._id ? (
-                        <ActivityIndicator color="#fff" size="small" />
-                      ) : (
-                        <Text style={styles.saveText}>Save Note</Text>
-                      )}
-                    </Pressable>
-                    <Pressable
-                      onPress={onCancelEditNote}
-                      style={[styles.actionButton, styles.cancelButton]}
-                      disabled={savingNoteId === item._id}
-                    >
-                      <Text style={styles.cancelText}>Cancel</Text>
-                    </Pressable>
-                  </View>
-                </>
-              ) : (
-                <>
-                  <Text style={styles.note}>{item.note ? `Note: ${item.note}` : "Note: No note added"}</Text>
-                  <View style={styles.actionRow}>
-                    <Pressable onPress={() => onStartEditNote(item)} style={[styles.actionButton, styles.editButton]}>
-                      <Text style={styles.editText}>Edit Note</Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => onRemoveFavorite(item._id)}
-                      style={[styles.actionButton, styles.removeButton, removingFavoriteId === item._id && styles.disabledButton]}
-                      disabled={removingFavoriteId === item._id}
-                    >
-                      {removingFavoriteId === item._id ? (
-                        <ActivityIndicator color="#b91c1c" size="small" />
-                      ) : (
-                        <Text style={styles.removeText}>Remove</Text>
-                      )}
-                    </Pressable>
-                  </View>
-                </>
-              )}
-            </View>
-          )}
+          renderItem={({ item }) => {
+            const isRowBusy = savingNoteId === item._id || removingFavoriteId === item._id;
+
+            return (
+              <View style={styles.card}>
+                <Text style={styles.propertyTitle}>{item.propertyId?.title || "Property"}</Text>
+                {editingFavoriteId === item._id ? (
+                  <>
+                    <TextInput
+                      style={styles.noteInput}
+                      placeholder="Add a note for this favorite"
+                      multiline
+                      numberOfLines={3}
+                      maxLength={MAX_NOTE_LENGTH}
+                      value={draftNote}
+                      onChangeText={setDraftNote}
+                    />
+                    <Text style={styles.noteCount}>{draftNote.length}/{MAX_NOTE_LENGTH}</Text>
+                    <View style={styles.actionRow}>
+                      <Pressable
+                        onPress={() => onSaveNote(item._id)}
+                        style={[
+                          styles.actionButton,
+                          styles.saveButton,
+                          savingNoteId === item._id && styles.disabledButton
+                        ]}
+                        disabled={savingNoteId === item._id}
+                      >
+                        {savingNoteId === item._id ? (
+                          <ActivityIndicator color="#fff" size="small" />
+                        ) : (
+                          <Text style={styles.saveText}>Save Note</Text>
+                        )}
+                      </Pressable>
+                      <Pressable
+                        onPress={onCancelEditNote}
+                        style={[styles.actionButton, styles.cancelButton]}
+                        disabled={savingNoteId === item._id}
+                      >
+                        <Text style={styles.cancelText}>Cancel</Text>
+                      </Pressable>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.note}>{item.note ? `Note: ${item.note}` : "Note: No note added"}</Text>
+                    <View style={styles.actionRow}>
+                      <Pressable
+                        onPress={() => onStartEditNote(item)}
+                        style={[styles.actionButton, styles.editButton, isRowBusy && styles.disabledButton]}
+                        disabled={isRowBusy}
+                      >
+                        <Text style={styles.editText}>Edit Note</Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => onRemoveFavorite(item._id)}
+                        style={[
+                          styles.actionButton,
+                          styles.removeButton,
+                          removingFavoriteId === item._id && styles.disabledButton
+                        ]}
+                        disabled={removingFavoriteId === item._id}
+                      >
+                        {removingFavoriteId === item._id ? (
+                          <ActivityIndicator color="#b91c1c" size="small" />
+                        ) : (
+                          <Text style={styles.removeText}>Remove</Text>
+                        )}
+                      </Pressable>
+                    </View>
+                  </>
+                )}
+              </View>
+            );
+          }}
         />
       )}
     </View>

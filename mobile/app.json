@@ -13,6 +13,11 @@
     },
     "ios": {
       "bundleIdentifier": "com.estava.mobile"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "130e5999-a59f-47d1-8460-d1751685ba67"
+      }
     }
   }
 }

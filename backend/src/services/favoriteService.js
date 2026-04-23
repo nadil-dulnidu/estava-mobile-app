@@ -9,17 +9,19 @@ const createFavorite = async (payload, userId) => {
     throw new AppError("Property not found", 404);
   }
 
-  const existing = await Favorite.findOne({ userId, propertyId: payload.propertyId });
-  if (existing) {
-    throw new AppError("Property is already in favorites", 409);
+  try {
+    return await Favorite.create({
+      userId,
+      propertyId: payload.propertyId,
+      note: payload.note || "",
+      priorityLevel: payload.priorityLevel || "medium"
+    });
+  } catch (error) {
+    if (error?.code === 11000) {
+      throw new AppError("Property is already in favorites", 409);
+    }
+    throw error;
   }
-
-  return Favorite.create({
-    userId,
-    propertyId: payload.propertyId,
-    note: payload.note || "",
-    priorityLevel: payload.priorityLevel || "medium"
-  });
 };
 
 const listFavoritesByUser = async (userId) => {

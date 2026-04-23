@@ -2,6 +2,7 @@
 const catchAsync = require("../utils/catchAsync");
 const { successResponse } = require("../utils/apiResponse");
 const {
+  validateFavoriteIdParam,
   validateCreateFavoriteInput,
   validateUpdateFavoriteInput
 } = require("../validators/favoriteValidator");
@@ -24,12 +25,14 @@ const listMine = catchAsync(async (req, res) => {
 });
 
 const update = catchAsync(async (req, res) => {
+  validateFavoriteIdParam(req.params.id);
   validateUpdateFavoriteInput(req.body);
   const favorite = await updateFavorite(req.params.id, req.body, req.user._id);
   return successResponse(res, favorite, "Favorite updated successfully", 200);
 });
 
 const remove = catchAsync(async (req, res) => {
+  validateFavoriteIdParam(req.params.id);
   await deleteFavorite(req.params.id, req.user._id);
   return successResponse(res, null, "Favorite removed successfully", 200);
 });

@@ -1,6 +1,14 @@
 // Favorites API client for property wishlist management
 import apiClient from "./client";
 
+const assertFavoriteId = (favoriteId) => {
+  const normalized = String(favoriteId || "").trim();
+  if (!normalized) {
+    throw new Error("Invalid favorite reference");
+  }
+  return encodeURIComponent(normalized);
+};
+
 export const favoriteApi = {
   // Add property to user favorites
   addFavorite: async (propertyId) => {
@@ -14,12 +22,14 @@ export const favoriteApi = {
 
   // Remove property from favorites
   removeFavorite: async (favoriteId) => {
-    return apiClient.delete(`/favorites/${favoriteId}`);
+    const safeId = assertFavoriteId(favoriteId);
+    return apiClient.delete(`/favorites/${safeId}`);
   },
 
   // Convenience helper for note-only updates from Favorites screen
   updateFavoriteNote: async (favoriteId, note) => {
-    return apiClient.patch(`/favorites/${favoriteId}`, { note });
+    const safeId = assertFavoriteId(favoriteId);
+    return apiClient.patch(`/favorites/${safeId}`, { note });
   }
 };
 

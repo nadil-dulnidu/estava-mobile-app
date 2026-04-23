@@ -26,14 +26,14 @@ Real estate mobile application for buying, selling, and renting properties.
 ## Backend Setup
 
 1. Open a terminal in `backend/`
-2. Install dependencies:
+1. Install dependencies:
 
 ```bash
 npm install
 ```
 
-3. Update `backend/.env` with your MongoDB Atlas URI and JWT secret.
-4. Run development server:
+1. Update `backend/.env` with your MongoDB Atlas URI and JWT secret.
+1. Run development server:
 
 ```bash
 npm run dev
@@ -62,13 +62,13 @@ Health check: `GET /api/health`
 ## Mobile Setup
 
 1. Open a terminal in `mobile/`
-2. Install dependencies:
+1. Install dependencies:
 
 ```bash
 npm install
 ```
 
-3. Create `.env` from `.env.example` and set:
+1. Create `.env` from `.env.example` and set:
 
 ```bash
 EXPO_PUBLIC_API_BASE_URL=https://your-hosted-backend.example.com/api
@@ -76,11 +76,46 @@ EXPO_PUBLIC_API_BASE_URL=https://your-hosted-backend.example.com/api
 
 For local Android emulator testing, fallback base URL is `http://10.0.2.2:5000/api`.
 
-4. Start app:
+1. Start app:
 
 ```bash
 npm start
 ```
+
+## Standalone Android Build (No `expo start` Required)
+
+Use this flow for final-demo distribution where the app runs as a standalone install.
+
+1. Open a terminal in `mobile/`.
+1. Log in once:
+
+```bash
+npx eas login
+```
+
+1. Build installable APK (internal distribution):
+
+```bash
+npm run build:android:apk
+```
+
+1. Install latest finished Android build on a connected emulator/device:
+
+```bash
+npm run install:android:latest
+```
+
+1. Build production Play Store artifact (AAB):
+
+```bash
+npm run build:android:aab
+```
+
+Notes:
+
+- `mobile/eas.json` is configured with `EXPO_PUBLIC_API_BASE_URL=https://estava-mobile-app.onrender.com/api` for development, preview, and production profiles.
+- Standalone APK/AAB builds do not require `expo start` to run.
+- This is assignment-compliant because the mobile app points to a hosted backend API.
 
 ## Docker (Backend Only)
 
@@ -91,6 +126,7 @@ docker compose up --build
 ```
 
 Notes:
+
 - Compose intentionally excludes MongoDB.
 - Backend connects to MongoDB Atlas using `MONGODB_URI` from `backend/.env`.
 
