@@ -9,6 +9,7 @@ router.use(protect);
 
 router.post("/", controller.create);
 router.get("/me", controller.listMine);
+router.delete("/:id/response", controller.clearResponse);
 router.patch("/:id", controller.update);
 router.delete("/:id", controller.remove);
 

@@ -8,17 +8,123 @@ import {
   StyleSheet,
   ActivityIndicator,
   Modal,
-  TextInput
+  Alert,
+  Platform
 } from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { appointmentApi } from "../api/appointmentApi";
 
-export default function AppointmentsScreen() {
+const STATUS_OPTIONS = [
+  { label: "Pending", value: "pending" },
+  { label: "Confirmed", value: "confirmed" },
+  { label: "Completed", value: "completed" },
+  { label: "Cancelled", value: "cancelled" }
+];
+
+const normalizeStatus = (value) => {
+  const normalized = String(value || "").toLowerCase();
+
+  if (
+    normalized === "pending" ||
+    normalized === "confirmed" ||
+    normalized === "completed" ||
+    normalized === "cancelled"
+  ) {
+    return normalized;
+  }
+
+  return "pending";
+};
+
+const getStatusColor = (status) => {
+  if (status === "confirmed") return "#2563eb";
+  if (status === "completed") return "#059669";
+  if (status === "cancelled") return "#b91c1c";
+  return "#d97706";
+};
+
+const getStatusLabel = (status) => {
+  const normalized = normalizeStatus(status);
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+};
+
+const formatDateValue = (value) => {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const formatTimeValue = (value) => {
+  const hours = String(value.getHours()).padStart(2, "0");
+  const minutes = String(value.getMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
+};
+
+const parseDateValue = (value) => {
+  if (typeof value !== "string") return null;
+
+  const parts = value.split("-");
+  if (parts.length !== 3) return null;
+
+  const year = Number(parts[0]);
+  const month = Number(parts[1]);
+  const day = Number(parts[2]);
+
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+    return null;
+  }
+
+  const parsedDate = new Date(year, month - 1, day);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return null;
+  }
+
+  return parsedDate;
+};
+
+const parseTimeValue = (value, baseDate) => {
+  if (typeof value !== "string") return null;
+
+  const parts = value.split(":");
+  if (parts.length < 2) return null;
+
+  const hours = Number(parts[0]);
+  const minutes = Number(parts[1]);
+
+  if (
+    !Number.isInteger(hours) ||
+    !Number.isInteger(minutes) ||
+    hours < 0 ||
+    hours > 23 ||
+    minutes < 0 ||
+    minutes > 59
+  ) {
+    return null;
+  }
+
+  const parsedTime = new Date(baseDate);
+  parsedTime.setHours(hours, minutes, 0, 0);
+  return parsedTime;
+};
+
+const getSafeErrorMessage = (err, fallback) => {
+  return err?.response?.data?.message || err?.response?.data?.error || err?.message || fallback;
+};
+
+export default function AppointmentsScreen({ navigation }) {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [modalVisible, setModalVisible] = useState(false);
-  const [appointmentDate, setAppointmentDate] = useState("");
-  const [appointmentTime, setAppointmentTime] = useState("");
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingAppointmentId, setEditingAppointmentId] = useState("");
+  const [editDate, setEditDate] = useState(new Date());
+  const [editTime, setEditTime] = useState(new Date());
+  const [editStatus, setEditStatus] = useState("pending");
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [softDeletingId, setSoftDeletingId] = useState("");
 
   useEffect(() => {
     loadAppointments();
@@ -29,21 +135,139 @@ export default function AppointmentsScreen() {
     setError("");
     try {
       const res = await appointmentApi.getMyAppointments();
-      setAppointments(res.data.data || []);
+      setAppointments(Array.isArray(res?.data?.data) ? res.data.data : []);
     } catch (err) {
-      setError(err.message || "Failed to load appointments");
+      setError(getSafeErrorMessage(err, "Failed to load appointments"));
     } finally {
       setLoading(false);
     }
   };
 
-  const onCancel = async (appointmentId) => {
-    try {
-      await appointmentApi.cancelAppointment(appointmentId);
-      loadAppointments();
-    } catch (err) {
-      setError("Failed to cancel appointment");
+  const closeEditModal = () => {
+    setEditModalVisible(false);
+    setShowDatePicker(false);
+    setShowTimePicker(false);
+    setEditingAppointmentId("");
+  };
+
+  const openEditModal = (appointment) => {
+    const initialDate = parseDateValue(appointment?.date) || new Date();
+    const initialTime = parseTimeValue(appointment?.time, initialDate) || new Date(initialDate);
+
+    setEditingAppointmentId(appointment?._id || "");
+    setEditDate(initialDate);
+    setEditTime(initialTime);
+    setEditStatus(normalizeStatus(appointment?.appointmentStatus || appointment?.status));
+    setShowDatePicker(false);
+    setShowTimePicker(false);
+    setEditModalVisible(true);
+    setError("");
+  };
+
+  const onSaveEdit = async () => {
+    if (!editingAppointmentId) {
+      setError("No appointment selected for update.");
+      return;
     }
+
+    setSavingEdit(true);
+    try {
+      await appointmentApi.updateAppointment(editingAppointmentId, {
+        date: formatDateValue(editDate),
+        time: formatTimeValue(editTime),
+        appointmentStatus: editStatus
+      });
+      closeEditModal();
+      await loadAppointments();
+    } catch (err) {
+      setError(getSafeErrorMessage(err, "Failed to update appointment"));
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const cancelAppointment = async (appointment) => {
+    try {
+      await appointmentApi.cancelAppointment(appointment._id);
+      await loadAppointments();
+    } catch (err) {
+      setError(getSafeErrorMessage(err, "Failed to mark appointment as cancelled"));
+    }
+  };
+
+  const confirmCancel = (appointment) => {
+    Alert.alert(
+      "Mark as Cancelled",
+      "This updates appointment status to Cancelled. You can hide it from your list afterwards.",
+      [
+        { text: "Keep", style: "cancel" },
+        {
+          text: "Mark Cancelled",
+          style: "destructive",
+          onPress: () => {
+            void cancelAppointment(appointment);
+          }
+        }
+      ]
+    );
+  };
+
+  const executeSoftDelete = async (appointmentId, fallbackMessage = "Failed to delete appointment") => {
+    setSoftDeletingId(appointmentId);
+    setError("");
+    try {
+      await appointmentApi.softDeleteAppointment(appointmentId);
+      await loadAppointments();
+    } catch (err) {
+      setError(getSafeErrorMessage(err, fallbackMessage));
+    } finally {
+      setSoftDeletingId("");
+    }
+  };
+
+  const confirmDeleteCompleted = (appointment) => {
+    const status = normalizeStatus(appointment?.appointmentStatus || appointment?.status);
+    if (status !== "completed") {
+      return;
+    }
+
+    Alert.alert(
+      "Delete Appointment",
+      "Are you sure you want to delete this completed appointment from your list?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            void executeSoftDelete(appointment._id, "Failed to delete appointment");
+          }
+        }
+      ]
+    );
+  };
+
+  const confirmSoftDelete = (appointment) => {
+    const status = normalizeStatus(appointment?.appointmentStatus || appointment?.status);
+    if (status !== "cancelled") {
+      setError("Only cancelled appointments can be hidden from your list.");
+      return;
+    }
+
+    Alert.alert(
+      "Hide Cancelled Appointment",
+      "This action removes the cancelled appointment from your list only.",
+      [
+        { text: "Back", style: "cancel" },
+        {
+          text: "Hide from My List",
+          style: "destructive",
+          onPress: () => {
+            void executeSoftDelete(appointment._id, "Failed to hide appointment");
+          }
+        }
+      ]
+    );
   };
 
   if (loading) return <ActivityIndicator style={{ marginTop: 20 }} size="large" />;
@@ -52,8 +276,8 @@ export default function AppointmentsScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>My Appointments</Text>
       {!!error && <Text style={styles.error}>{error}</Text>}
-      <Pressable style={styles.bookButton} onPress={() => setModalVisible(true)}>
-        <Text style={styles.bookButtonText}>+ Book Appointment</Text>
+      <Pressable style={styles.bookButton} onPress={() => navigation.navigate("PropertyList")}>
+        <Text style={styles.bookButtonText}>+ Book from Properties</Text>
       </Pressable>
 
       {appointments.length === 0 ? (
@@ -61,47 +285,150 @@ export default function AppointmentsScreen() {
       ) : (
         <FlatList
           data={appointments}
-          keyExtractor={(item) => item._id}
+          keyExtractor={(item, index) => item?._id || `appointment-${index}`}
           renderItem={({ item }) => (
             <View style={styles.card}>
-              <Text style={styles.property}>{item.propertyId?.title || "Property"}</Text>
-              <Text style={styles.date}>📅 {item.date}</Text>
-              <Text style={styles.time}>🕐 {item.time}</Text>
-              <Text style={[styles.status, { color: item.status === "confirmed" ? "#059669" : "#d97706" }]}>
-                {item.status.toUpperCase()}
-              </Text>
-              {item.status !== "cancelled" && (
-                <Pressable style={styles.cancelButton} onPress={() => onCancel(item._id)}>
-                  <Text style={styles.cancelText}>Cancel</Text>
-                </Pressable>
-              )}
+              {(() => {
+                const status = normalizeStatus(item?.appointmentStatus || item?.status);
+                const isCancelled = status === "cancelled";
+                const isCompleted = status === "completed";
+                return (
+                  <>
+                    <Text style={styles.property}>{item?.propertyId?.title || "Property"}</Text>
+                    <Text style={styles.date}>Date: {item?.date || "-"}</Text>
+                    <Text style={styles.time}>Time: {item?.time || "-"}</Text>
+                    <Text style={[styles.status, { color: getStatusColor(status) }]}>
+                      {getStatusLabel(status)}
+                    </Text>
+
+                    <View style={styles.actionRow}>
+                      {isCompleted ? (
+                        <Pressable
+                          style={styles.deleteButton}
+                          onPress={() => confirmDeleteCompleted(item)}
+                          disabled={softDeletingId === item?._id}
+                        >
+                          <Text style={styles.deleteText}>
+                            {softDeletingId === item?._id ? "Deleting..." : "Delete Appointment"}
+                          </Text>
+                        </Pressable>
+                      ) : (
+                        <>
+                          <Pressable style={styles.editButton} onPress={() => openEditModal(item)}>
+                            <Text style={styles.editButtonText}>Edit</Text>
+                          </Pressable>
+
+                          {!isCancelled ? (
+                            <Pressable style={styles.cancelButton} onPress={() => confirmCancel(item)}>
+                              <Text style={styles.cancelText}>Mark Cancelled</Text>
+                            </Pressable>
+                          ) : (
+                            <Pressable
+                              style={styles.hideButton}
+                              onPress={() => confirmSoftDelete(item)}
+                              disabled={softDeletingId === item?._id}
+                            >
+                              <Text style={styles.hideText}>
+                                {softDeletingId === item?._id ? "Hiding..." : "Hide from My List"}
+                              </Text>
+                            </Pressable>
+                          )}
+                        </>
+                      )}
+                    </View>
+
+                    {isCancelled && (
+                      <Text style={styles.noteText}>
+                        Hide from My List only removes this cancelled appointment from your view.
+                      </Text>
+                    )}
+
+                    {isCompleted && (
+                      <Text style={styles.noteText}>
+                        Delete Appointment removes this completed appointment from your view.
+                      </Text>
+                    )}
+                  </>
+                );
+              })()}
             </View>
           )}
         />
       )}
 
-      <Modal visible={modalVisible} transparent animationType="slide">
+      <Modal
+        visible={editModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={closeEditModal}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Book Appointment</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Date (YYYY-MM-DD)"
-              value={appointmentDate}
-              onChangeText={setAppointmentDate}
-            />
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Time (HH:MM)"
-              value={appointmentTime}
-              onChangeText={setAppointmentTime}
-            />
+            <Text style={styles.modalTitle}>Update Appointment</Text>
+
+            <Pressable style={styles.pickerButton} onPress={() => setShowDatePicker(true)}>
+              <Text style={styles.pickerLabel}>Date</Text>
+              <Text style={styles.pickerValue}>{formatDateValue(editDate)}</Text>
+            </Pressable>
+
+            <Pressable style={styles.pickerButton} onPress={() => setShowTimePicker(true)}>
+              <Text style={styles.pickerLabel}>Time</Text>
+              <Text style={styles.pickerValue}>{formatTimeValue(editTime)}</Text>
+            </Pressable>
+
+            {showDatePicker && (
+              <DateTimePicker
+                value={editDate}
+                mode="date"
+                display={Platform.OS === "ios" ? "inline" : "default"}
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(Platform.OS === "ios");
+                  if (selectedDate) {
+                    setEditDate(selectedDate);
+                  }
+                }}
+              />
+            )}
+
+            {showTimePicker && (
+              <DateTimePicker
+                value={editTime}
+                mode="time"
+                is24Hour={true}
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                onChange={(event, selectedTime) => {
+                  setShowTimePicker(Platform.OS === "ios");
+                  if (selectedTime) {
+                    setEditTime(selectedTime);
+                  }
+                }}
+              />
+            )}
+
+            <Text style={styles.statusLabel}>Status</Text>
+            <View style={styles.statusOptionsRow}>
+              {STATUS_OPTIONS.map((option) => {
+                const active = option.value === editStatus;
+                return (
+                  <Pressable
+                    key={option.value}
+                    style={[styles.statusChip, active && styles.statusChipActive]}
+                    onPress={() => setEditStatus(option.value)}
+                  >
+                    <Text style={[styles.statusChipText, active && styles.statusChipTextActive]}>
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
             <View style={styles.modalButtons}>
-              <Pressable style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
-                <Text style={styles.cancelTxt}>Cancel</Text>
+              <Pressable style={styles.modalCancelButton} onPress={closeEditModal}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
               </Pressable>
-              <Pressable style={styles.submitBtn} onPress={() => setModalVisible(false)}>
-                <Text style={styles.submitText}>Book</Text>
+              <Pressable style={styles.modalSaveButton} onPress={onSaveEdit} disabled={savingEdit}>
+                <Text style={styles.modalSaveText}>{savingEdit ? "Saving..." : "Save Changes"}</Text>
               </Pressable>
             </View>
           </View>
@@ -128,21 +455,149 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 8,
     padding: 12,
-    marginBottom: 12
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#e5e7eb"
   },
   property: { fontSize: 16, fontWeight: "600" },
   date: { fontSize: 14, color: "#374151", marginTop: 6 },
   time: { fontSize: 14, color: "#374151", marginTop: 4 },
-  status: { fontSize: 12, fontWeight: "600", marginTop: 4 },
-  cancelButton: { marginTop: 8, paddingVertical: 6, alignItems: "center" },
-  cancelText: { color: "#b91c1c", fontWeight: "600" },
-  modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.3)" },
-  modalContent: { backgroundColor: "#fff", padding: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16 },
-  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12 },
-  modalInput: { borderWidth: 1, borderColor: "#d1d5db", borderRadius: 8, padding: 10, marginBottom: 12 },
-  modalButtons: { flexDirection: "row", justifyContent: "space-around" },
-  cancelBtn: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, backgroundColor: "#e5e7eb" },
-  cancelTxt: { color: "#374151", fontWeight: "600" },
-  submitBtn: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, backgroundColor: "#1d4ed8" },
-  submitText: { color: "#fff", fontWeight: "600" }
+  status: { fontSize: 12, fontWeight: "700", marginTop: 6 },
+  actionRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 10
+  },
+  editButton: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: "#dbeafe",
+    alignItems: "center"
+  },
+  editButtonText: {
+    color: "#1d4ed8",
+    fontWeight: "700"
+  },
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: "#fee2e2",
+    alignItems: "center"
+  },
+  cancelText: { color: "#b91c1c", fontWeight: "700" },
+  hideButton: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: "#fef3c7",
+    alignItems: "center"
+  },
+  hideText: { color: "#92400e", fontWeight: "700" },
+  deleteButton: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: "#fee2e2",
+    alignItems: "center"
+  },
+  deleteText: { color: "#b91c1c", fontWeight: "700" },
+  noteText: {
+    marginTop: 8,
+    fontSize: 12,
+    color: "#6b7280"
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.3)"
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 16
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 12,
+    color: "#111827"
+  },
+  pickerButton: {
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 10,
+    backgroundColor: "#fff"
+  },
+  pickerLabel: {
+    color: "#6b7280",
+    fontSize: 12
+  },
+  pickerValue: {
+    marginTop: 4,
+    color: "#111827",
+    fontWeight: "600"
+  },
+  statusLabel: {
+    marginTop: 6,
+    marginBottom: 8,
+    color: "#1f2937",
+    fontWeight: "700"
+  },
+  statusOptionsRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 8
+  },
+  statusChip: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    borderRadius: 20,
+    paddingVertical: 8,
+    alignItems: "center",
+    backgroundColor: "#fff"
+  },
+  statusChipActive: {
+    borderColor: "#1d4ed8",
+    backgroundColor: "#1d4ed8"
+  },
+  statusChipText: {
+    color: "#374151",
+    fontWeight: "600"
+  },
+  statusChipTextActive: {
+    color: "#fff"
+  },
+  modalButtons: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 12
+  },
+  modalCancelButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: "#e5e7eb",
+    alignItems: "center"
+  },
+  modalCancelText: {
+    color: "#374151",
+    fontWeight: "600"
+  },
+  modalSaveButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: "#1d4ed8",
+    alignItems: "center"
+  },
+  modalSaveText: {
+    color: "#fff",
+    fontWeight: "700"
+  }
 });

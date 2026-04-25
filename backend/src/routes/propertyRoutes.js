@@ -3,6 +3,7 @@ const express = require("express");
 const {
   create,
   list,
+  listMine,
   getById,
   update,
   remove
@@ -12,11 +13,21 @@ const { uploadPropertyImages } = require("../middlewares/uploadMiddleware");
 
 const router = express.Router();
 
-router.get("/", list);
-router.get("/:id", getById);
+const optionalProtect = (req, res, next) => {
+  const authHeader = req.headers.authorization || "";
+  if (!authHeader.startsWith("Bearer ")) {
+    return next();
+  }
 
-router.post("/", protect, authorize("seller", "admin"), uploadPropertyImages, create);
-router.patch("/:id", protect, authorize("seller", "admin"), uploadPropertyImages, update);
-router.delete("/:id", protect, authorize("seller", "admin"), remove);
+  return protect(req, res, next);
+};
+
+router.get("/", list);
+router.get("/mine", protect, authorize("buyer", "seller", "admin"), listMine);
+router.get("/:id", optionalProtect, getById);
+
+router.post("/", protect, authorize("buyer", "seller", "admin"), uploadPropertyImages, create);
+router.patch("/:id", protect, authorize("buyer", "seller", "admin"), uploadPropertyImages, update);
+router.delete("/:id", protect, authorize("buyer", "seller", "admin"), remove);
 
 module.exports = router;

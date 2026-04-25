@@ -2,6 +2,7 @@
 const catchAsync = require("../utils/catchAsync");
 const { successResponse } = require("../utils/apiResponse");
 const {
+  validateAppointmentIdParam,
   validateCreateAppointmentInput,
   validateUpdateAppointmentInput
 } = require("../validators/appointmentValidator");
@@ -24,14 +25,20 @@ const listMine = catchAsync(async (req, res) => {
 });
 
 const update = catchAsync(async (req, res) => {
+  validateAppointmentIdParam(req.params.id);
   validateUpdateAppointmentInput(req.body);
   const appointment = await updateAppointment(req.params.id, req.body, req.user);
   return successResponse(res, appointment, "Appointment updated successfully", 200);
 });
 
 const remove = catchAsync(async (req, res) => {
-  await deleteAppointment(req.params.id, req.user);
-  return successResponse(res, null, "Appointment cancelled successfully", 200);
+  validateAppointmentIdParam(req.params.id);
+  const result = await deleteAppointment(req.params.id, req.user);
+  const message = result.hardDeleted
+    ? "Appointment deleted permanently for both buyer and seller"
+    : "Appointment removed from your list";
+
+  return successResponse(res, null, message, 200);
 });
 
 module.exports = {

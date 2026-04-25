@@ -2,6 +2,34 @@
 
 This checklist captures what is complete for Phase 2 and what must be done to enter Phase 3 (integration, testing, and deployment hardening).
 
+## Current Phase 3 Behavior Snapshot (April 2026)
+
+### Properties
+- CRUD flow is expanded with owner/admin controls for status updates and deletion actions.
+- `listingStatus` values: `available`, `sold`, `rented`, `delisted`.
+- Delisted behavior: buyer/public feeds exclude delisted items while owner/admin users can still view and manage their own delisted listings.
+- Property create flow supports `features` input, and the properties screen includes a top "Post Property" CTA.
+
+### Inquiries
+- CRUD flow includes response edit/clear capabilities for agent/admin users.
+- `inquiryStatus` values: `pending`, `replied`, `closed`.
+- Buyer delete-after-reply rule is enforced, with admin moderation override.
+- Mobile delete confirmation copy is standardized to professional user-facing wording.
+
+### Appointments
+- CRUD flow includes appointment updates for schedule and status fields.
+- `appointmentStatus` values: `pending`, `confirmed`, `completed`, `cancelled`.
+- Delete behavior uses dual soft-delete semantics for buyer and agent perspectives, including completed-status side delete eligibility.
+
+### Reviews
+- Review CRUD supports edit behavior in addition to create and delete.
+- Property detail views include average review display.
+- Property detail includes a "Review this property" shortcut that opens reviews with preselected property context.
+
+### Security Hardening
+- Property, inquiry, and appointment services include tighter authorization and ownership checks.
+- Validators for these modules include stronger update/delete and status-transition validation.
+
 ## Phase 2 Completion Status
 
 Completed backend modules:

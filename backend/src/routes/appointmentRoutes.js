@@ -9,7 +9,9 @@ router.use(protect);
 
 router.post("/", controller.create);
 router.get("/me", controller.listMine);
-router.patch("/:id", controller.update);
-router.delete("/:id", controller.remove);
+router
+  .route("/:id")
+  .patch(controller.update)
+  .delete(controller.remove);
 
 module.exports = router;

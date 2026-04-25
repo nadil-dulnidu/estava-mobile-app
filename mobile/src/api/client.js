@@ -6,7 +6,8 @@ const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || "http://10.0.2.2:50
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 15000,
+  // Hosted free tiers can cold-start; allow a longer first request window.
+  timeout: 45000,
   headers: {
     "Content-Type": "application/json"
   }

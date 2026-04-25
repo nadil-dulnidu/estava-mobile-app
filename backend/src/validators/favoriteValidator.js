@@ -34,7 +34,14 @@ const validateUpdateFavoriteInput = (payload) => {
   }
 };
 
+const validateFavoriteIdParam = (favoriteId) => {
+  if (!favoriteId || !mongoose.Types.ObjectId.isValid(favoriteId)) {
+    throw new AppError("Invalid favorite id", 400);
+  }
+};
+
 module.exports = {
   validateCreateFavoriteInput,
-  validateUpdateFavoriteInput
+  validateUpdateFavoriteInput,
+  validateFavoriteIdParam
 };

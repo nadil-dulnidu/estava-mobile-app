@@ -11,6 +11,7 @@ import InquiriesScreen from "../screens/InquiriesScreen";
 import AppointmentsScreen from "../screens/AppointmentsScreen";
 import ReviewsScreen from "../screens/ReviewsScreen";
 import NotificationsScreen from "../screens/NotificationsScreen";
+import CreatePropertyScreen from "../screens/CreatePropertyScreen";
 import { useAuth } from "../context/AuthContext";
 
 const Stack = createNativeStackNavigator();
@@ -27,6 +28,11 @@ export default function AppNavigator() {
             name="PropertyList"
             component={PropertyListScreen}
             options={{ title: "Properties" }}
+          />
+          <Stack.Screen
+            name="CreateProperty"
+            component={CreatePropertyScreen}
+            options={{ title: "Post Property" }}
           />
           <Stack.Screen
             name="PropertyDetail"

@@ -43,11 +43,34 @@ const inquirySchema = new mongoose.Schema(
       enum: ["pending", "replied", "closed"],
       default: "pending",
       index: true
+    },
+    responseMessage: {
+      type: String,
+      trim: true,
+      maxlength: 3000,
+      default: ""
+    },
+    respondedAt: {
+      type: Date,
+      default: null
     }
   },
   {
     timestamps: true
   }
 );
+
+inquirySchema.methods.hasResponse = function hasResponse() {
+  return Boolean(this.responseMessage && this.responseMessage.trim().length > 0);
+};
+
+inquirySchema.methods.clearResponse = function clearResponse() {
+  this.responseMessage = "";
+  this.respondedAt = null;
+
+  if (this.inquiryStatus === "replied") {
+    this.inquiryStatus = "pending";
+  }
+};
 
 module.exports = mongoose.model("Inquiry", inquirySchema);
