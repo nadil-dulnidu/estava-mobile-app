@@ -204,12 +204,12 @@ export default function InquiriesScreen() {
 
   const onDeleteInquiry = (item) => {
     Alert.alert(
-      "Delete inquiry",
-      "Are you sure you want to delete this inquiry?",
+      "Hide inquiry",
+      "This removes the inquiry from your view. It will be permanently deleted only after both participants hide it.",
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Delete",
+          text: "Hide",
           style: "destructive",
           onPress: async () => {
             setActionLoading(true);
@@ -218,7 +218,7 @@ export default function InquiriesScreen() {
               await inquiryApi.removeInquiry(item._id);
               await loadInquiries();
             } catch (err) {
-              setError(getApiErrorMessage(err, "Failed to delete inquiry"));
+              setError(getApiErrorMessage(err, "Failed to hide inquiry"));
             } finally {
               setActionLoading(false);
             }
@@ -312,6 +312,13 @@ export default function InquiriesScreen() {
                           <Text style={styles.actionDangerText}>Clear Response</Text>
                         </Pressable>
                       ) : null}
+                      <Pressable
+                        style={styles.actionDanger}
+                        onPress={() => onDeleteInquiry(item)}
+                        disabled={actionLoading}
+                      >
+                        <Text style={styles.actionDangerText}>Hide Inquiry</Text>
+                      </Pressable>
                     </>
                   ) : (
                     <>
@@ -322,22 +329,16 @@ export default function InquiriesScreen() {
                       >
                         <Text style={styles.actionSecondaryText}>Edit Inquiry</Text>
                       </Pressable>
-                      {hasResponse ? (
-                        <Pressable
-                          style={styles.actionDanger}
-                          onPress={() => onDeleteInquiry(item)}
-                          disabled={actionLoading}
-                        >
-                          <Text style={styles.actionDangerText}>Delete Inquiry</Text>
-                        </Pressable>
-                      ) : null}
+                      <Pressable
+                        style={styles.actionDanger}
+                        onPress={() => onDeleteInquiry(item)}
+                        disabled={actionLoading}
+                      >
+                        <Text style={styles.actionDangerText}>Hide Inquiry</Text>
+                      </Pressable>
                     </>
                   )}
                 </View>
-
-                {!isIncoming && !hasResponse ? (
-                  <Text style={styles.actionHint}>Delete is available after a seller response.</Text>
-                ) : null}
               </View>
             );
           }}

@@ -77,7 +77,16 @@ const createInquiry = async (payload, userId) => {
 
 const listInquiriesForUser = async (user) => {
   const query = {
-    $or: [{ senderUserId: user._id }, { agentId: user._id }]
+    $or: [
+      {
+        senderUserId: user._id,
+        senderSoftDeleted: { $ne: true }
+      },
+      {
+        agentId: user._id,
+        agentSoftDeleted: { $ne: true }
+      }
+    ]
   };
 
   if (user.role === "admin") {
@@ -192,17 +201,33 @@ const deleteInquiry = async (inquiryId, user) => {
   }
 
   const isOwner = inquiry.senderUserId.toString() === user._id.toString();
+  const isAssignedAgent = inquiry.agentId.toString() === user._id.toString();
   const isAdmin = user.role === "admin";
 
-  if (!isOwner && !isAdmin) {
-    throw new AppError("You can only delete your own inquiry", 403);
+  if (!isOwner && !isAssignedAgent && !isAdmin) {
+    throw new AppError("You do not have permission to remove this inquiry", 403);
   }
 
-  if (!isAdmin && !inquiryHasResponse(inquiry)) {
-    throw new AppError("You can delete an inquiry only after it has been replied to", 400);
+  if (isAdmin) {
+    await Inquiry.findByIdAndDelete(inquiryId);
+    return { deletedPermanently: true };
   }
 
-  await Inquiry.findByIdAndDelete(inquiryId);
+  if (isOwner) {
+    inquiry.senderSoftDeleted = true;
+  }
+
+  if (isAssignedAgent) {
+    inquiry.agentSoftDeleted = true;
+  }
+
+  if (inquiry.senderSoftDeleted && inquiry.agentSoftDeleted) {
+    await Inquiry.findByIdAndDelete(inquiryId);
+    return { deletedPermanently: true };
+  }
+
+  await inquiry.save();
+  return { deletedPermanently: false };
 };
 
 const clearInquiryResponse = async (inquiryId, user) => {

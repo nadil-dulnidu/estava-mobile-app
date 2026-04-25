@@ -8,12 +8,15 @@ import {
   ScrollView,
   Pressable,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  Image
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { createProperty } from "../api/propertyApi";
 
 const MAX_FEATURES = 20;
 const MAX_FEATURE_LENGTH = 50;
+const MAX_IMAGES = 8;
 
 const parseNonNegativeNumber = (value, options = {}) => {
   const { required = false, defaultValue = 0 } = options;
@@ -78,8 +81,43 @@ export default function CreatePropertyScreen({ navigation }) {
   const [bathrooms, setBathrooms] = useState("");
   const [areaSize, setAreaSize] = useState("");
   const [featuresText, setFeaturesText] = useState("");
+  const [selectedImages, setSelectedImages] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  const onPickImages = async () => {
+    setError("");
+
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permissionResult.granted) {
+      setError("Media library permission is required to upload property images.");
+      return;
+    }
+
+    const selectionRemaining = MAX_IMAGES - selectedImages.length;
+    if (selectionRemaining <= 0) {
+      setError(`You can upload up to ${MAX_IMAGES} images.`);
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      quality: 0.85,
+      selectionLimit: selectionRemaining
+    });
+
+    if (result.canceled || !Array.isArray(result.assets)) {
+      return;
+    }
+
+    const nextImages = [...selectedImages, ...result.assets].slice(0, MAX_IMAGES);
+    setSelectedImages(nextImages);
+  };
+
+  const onRemoveImage = (uri) => {
+    setSelectedImages((current) => current.filter((image) => image.uri !== uri));
+  };
 
   const onSubmit = async () => {
     setError("");
@@ -131,7 +169,8 @@ export default function CreatePropertyScreen({ navigation }) {
         bedrooms: parsedBedrooms.value,
         bathrooms: parsedBathrooms.value,
         areaSize: parsedAreaSize.value,
-        features
+        features,
+        images: selectedImages
       });
 
       Alert.alert("Success", "Property posted successfully", [
@@ -252,6 +291,25 @@ export default function CreatePropertyScreen({ navigation }) {
         onChangeText={setFeaturesText}
       />
 
+      <Text style={styles.inputLabel}>Property Images</Text>
+      <Text style={styles.helperText}>Upload up to {MAX_IMAGES} JPG/PNG/WEBP images.</Text>
+      <Pressable style={styles.pickImageButton} onPress={onPickImages}>
+        <Text style={styles.pickImageButtonText}>Choose Images ({selectedImages.length}/{MAX_IMAGES})</Text>
+      </Pressable>
+
+      {selectedImages.length > 0 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagePreviewRow}>
+          {selectedImages.map((image) => (
+            <View key={image.uri} style={styles.previewCard}>
+              <Image source={{ uri: image.uri }} style={styles.previewImage} />
+              <Pressable style={styles.removeImageButton} onPress={() => onRemoveImage(image.uri)}>
+                <Text style={styles.removeImageButtonText}>Remove</Text>
+              </Pressable>
+            </View>
+          ))}
+        </ScrollView>
+      ) : null}
+
       <Pressable style={styles.submitButton} onPress={onSubmit} disabled={submitting}>
         {submitting ? (
           <ActivityIndicator color="#fff" />
@@ -291,6 +349,11 @@ const styles = StyleSheet.create({
     color: "#374151",
     marginBottom: 6
   },
+  helperText: {
+    color: "#6b7280",
+    marginBottom: 8,
+    fontSize: 12
+  },
   row: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -322,6 +385,42 @@ const styles = StyleSheet.create({
   },
   inlineInput: {
     marginBottom: 12
+  },
+  pickImageButton: {
+    backgroundColor: "#dbeafe",
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: "center",
+    marginBottom: 10
+  },
+  pickImageButtonText: {
+    color: "#1d4ed8",
+    fontWeight: "700"
+  },
+  imagePreviewRow: {
+    marginBottom: 14
+  },
+  previewCard: {
+    marginRight: 10,
+    width: 130
+  },
+  previewImage: {
+    width: 130,
+    height: 88,
+    borderRadius: 10,
+    backgroundColor: "#e5e7eb"
+  },
+  removeImageButton: {
+    marginTop: 6,
+    backgroundColor: "#fee2e2",
+    borderRadius: 8,
+    paddingVertical: 6,
+    alignItems: "center"
+  },
+  removeImageButtonText: {
+    color: "#b91c1c",
+    fontWeight: "600",
+    fontSize: 12
   },
   submitButton: {
     backgroundColor: "#1d4ed8",

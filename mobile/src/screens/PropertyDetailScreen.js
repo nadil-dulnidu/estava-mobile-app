@@ -14,6 +14,7 @@ import {
   Platform
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import * as ImagePicker from "expo-image-picker";
 import { deleteProperty, getPropertyById, updateProperty } from "../api/propertyApi";
 import { favoriteApi } from "../api/favoriteApi";
 import { inquiryApi } from "../api/inquiryApi";
@@ -34,6 +35,7 @@ export default function PropertyDetailScreen({ route, navigation }) {
   const [reviewsError, setReviewsError] = useState("");
   const [ownerActionLoading, setOwnerActionLoading] = useState(false);
   const [favoriteActionLoading, setFavoriteActionLoading] = useState(false);
+  const [ownerImageUploadLoading, setOwnerImageUploadLoading] = useState(false);
 
   // Inquiry modal state
   const [inquiryModalVisible, setInquiryModalVisible] = useState(false);
@@ -200,6 +202,42 @@ export default function PropertyDetailScreen({ route, navigation }) {
     ]);
   };
 
+  const handleAddPropertyPhotos = async () => {
+    if (!isOwner || ownerActionLoading || ownerImageUploadLoading) {
+      return;
+    }
+
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permissionResult.granted) {
+      Alert.alert("Permission needed", "Allow media library access to upload property images.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      quality: 0.85,
+      selectionLimit: 8
+    });
+
+    if (result.canceled || !Array.isArray(result.assets) || result.assets.length === 0) {
+      return;
+    }
+
+    setOwnerImageUploadLoading(true);
+    try {
+      const updated = await updateProperty(propertyId, {
+        images: result.assets
+      });
+      setProperty(updated);
+      Alert.alert("Success", "Photos added successfully");
+    } catch (err) {
+      Alert.alert("Error", getSafeErrorMessage("Failed to add photos", err));
+    } finally {
+      setOwnerImageUploadLoading(false);
+    }
+  };
+
   const handleAddFavorite = async () => {
     if (favoriteActionLoading) {
       return;
@@ -359,6 +397,15 @@ export default function PropertyDetailScreen({ route, navigation }) {
             disabled={ownerActionLoading}
           >
             <Text style={styles.deleteListingText}>Delete Listing</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.addPhotosButton, ownerImageUploadLoading && styles.disabledControl]}
+            onPress={handleAddPropertyPhotos}
+            disabled={ownerImageUploadLoading}
+          >
+            <Text style={styles.addPhotosText}>
+              {ownerImageUploadLoading ? "Uploading..." : "Add More Photos"}
+            </Text>
           </Pressable>
         </>
       ) : null}
@@ -618,6 +665,19 @@ const styles = StyleSheet.create({
   },
   deleteListingText: {
     color: "#b91c1c",
+    fontWeight: "700"
+  },
+  addPhotosButton: {
+    backgroundColor: "#dbeafe",
+    borderColor: "#1d4ed8",
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: "center",
+    marginBottom: 6
+  },
+  addPhotosText: {
+    color: "#1d4ed8",
     fontWeight: "700"
   },
   disabledControl: {
