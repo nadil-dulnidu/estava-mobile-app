@@ -14,6 +14,7 @@ import AppointmentsScreen from "../screens/AppointmentsScreen";
 import ReviewsScreen from "../screens/ReviewsScreen";
 import NotificationsScreen from "../screens/NotificationsScreen";
 import CreatePropertyScreen from "../screens/CreatePropertyScreen";
+import ProfileScreen from "../screens/ProfileScreen";
 import { useAuth } from "../context/AuthContext";
 
 const Stack = createNativeStackNavigator();
@@ -75,6 +76,11 @@ export default function AppNavigator() {
             name="Notifications"
             component={NotificationsScreen}
             options={{ title: "Notifications" }}
+          />
+          <Stack.Screen
+            name="Profile"
+            component={ProfileScreen}
+            options={{ title: "My Profile" }}
           />
         </>
       ) : (

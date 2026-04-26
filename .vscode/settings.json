@@ -8,6 +8,8 @@
         "Average:": true,
         "inputLabel": true,
         "Listing": true,
-        "Land": true
+        "Land": true,
+        "npm run lint": true,
+        "npm.cmd": true
     }
 }

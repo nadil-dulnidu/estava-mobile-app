@@ -1,10 +1,12 @@
 // Screen component for user-facing workflow in the real-estate mobile app.
 import React from "react";
-import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
+import { View, Text, Pressable, StyleSheet, ScrollView, Image } from "react-native";
 import { useAuth } from "../context/AuthContext";
 
 export default function HomeScreen({ navigation }) {
   const { user, logout } = useAuth();
+
+  const profileInitial = String(user?.fullName || "").trim().charAt(0).toUpperCase() || "U";
 
   const menuItems = [
     { label: "Browse Properties", screen: "PropertyList", icon: "🏠" },
@@ -20,6 +22,22 @@ export default function HomeScreen({ navigation }) {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
+        <Pressable
+          style={styles.profileButton}
+          onPress={() => navigation.navigate("Profile")}
+          accessibilityLabel="Open profile"
+          accessibilityHint="Opens your account details and contact settings"
+          accessibilityRole="button"
+          hitSlop={8}
+        >
+          {user?.profileImage ? (
+            <Image source={{ uri: user.profileImage }} style={styles.profileImage} />
+          ) : (
+            <View style={styles.profileFallback}>
+              <Text style={styles.profileFallbackText}>{profileInitial}</Text>
+            </View>
+          )}
+        </Pressable>
         <Text style={styles.title}>Estava</Text>
         <Text style={styles.subtitle}>{user?.fullName}</Text>
         <Text style={styles.caption}>Role: {user?.role}</Text>
@@ -31,6 +49,9 @@ export default function HomeScreen({ navigation }) {
             key={item.screen}
             style={styles.menuCard}
             onPress={() => navigation.navigate(item.screen)}
+            accessibilityRole="button"
+            accessibilityLabel={item.label}
+            accessibilityHint={`Opens ${item.label.toLowerCase()} screen`}
           >
             <Text style={styles.icon}>{item.icon}</Text>
             <Text style={styles.menuLabel}>{item.label}</Text>
@@ -38,7 +59,13 @@ export default function HomeScreen({ navigation }) {
         ))}
       </View>
 
-      <Pressable style={styles.logoutButton} onPress={logout}>
+      <Pressable
+        style={styles.logoutButton}
+        onPress={logout}
+        accessibilityRole="button"
+        accessibilityLabel="Logout"
+        accessibilityHint="Signs out of your account"
+      >
         <Text style={styles.logoutText}>Logout</Text>
       </Pressable>
     </ScrollView>
@@ -54,7 +81,45 @@ const styles = StyleSheet.create({
   header: {
     alignItems: "center",
     paddingHorizontal: 20,
-    marginBottom: 20
+    marginBottom: 20,
+    position: "relative"
+  },
+  profileButton: {
+    position: "absolute",
+    top: 0,
+    right: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: "hidden",
+    backgroundColor: "#dbeafe",
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+    shadowColor: "#1d4ed8",
+    shadowOpacity: 0.14,
+    shadowRadius: 6,
+    shadowOffset: {
+      width: 0,
+      height: 2
+    },
+    elevation: 3,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  profileImage: {
+    width: "100%",
+    height: "100%"
+  },
+  profileFallback: {
+    width: "100%",
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#1d4ed8"
+  },
+  profileFallbackText: {
+    color: "#ffffff",
+    fontWeight: "700"
   },
   title: {
     fontSize: 32,
@@ -83,6 +148,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     backgroundColor: "#fff",
     borderRadius: 12,
+    minHeight: 88,
     paddingVertical: 20,
     alignItems: "center",
     borderLeftWidth: 4,
@@ -103,6 +169,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     backgroundColor: "#b91c1c",
     borderRadius: 12,
+    minHeight: 44,
     paddingVertical: 12,
     alignItems: "center"
   },

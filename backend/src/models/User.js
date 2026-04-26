@@ -28,6 +28,17 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ["buyer", "seller", "admin"],
       default: "buyer"
+    },
+    phoneNumber: {
+      type: String,
+      trim: true,
+      maxlength: 30,
+      default: null
+    },
+    profileImage: {
+      type: String,
+      trim: true,
+      default: null
     }
   },
   {

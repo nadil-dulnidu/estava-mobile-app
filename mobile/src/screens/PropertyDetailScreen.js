@@ -236,6 +236,17 @@ export default function PropertyDetailScreen({ route, navigation }) {
     }
   };
 
+  const openInquiryModal = () => {
+    if (!String(inquiryContact || "").trim() && user?.phoneNumber) {
+      setInquiryContact(String(user.phoneNumber).replace(/\D/g, "").slice(0, 10));
+    }
+    setInquiryModalVisible(true);
+  };
+
+  const closeInquiryModal = () => {
+    setInquiryModalVisible(false);
+  };
+
   const handleSendInquiry = async () => {
     if (!inquirySubject.trim() || !inquiryMessage.trim() || !inquiryContact.trim()) {
       Alert.alert("Error", "All fields are required");
@@ -280,6 +291,10 @@ export default function PropertyDetailScreen({ route, navigation }) {
     } catch (err) {
       Alert.alert("Error", err.response?.data?.message || "Failed to book appointment");
     }
+  };
+
+  const closeAppointmentModal = () => {
+    setAppointmentModalVisible(false);
   };
 
   if (loading) {
@@ -361,7 +376,7 @@ export default function PropertyDetailScreen({ route, navigation }) {
           <Text style={styles.actionButtonLabel}>{isFavorite ? "Favorited" : "Favorite"}</Text>
         </Pressable>
 
-        <Pressable style={styles.actionButton} onPress={() => setInquiryModalVisible(true)}>
+        <Pressable style={styles.actionButton} onPress={openInquiryModal}>
           <Text style={styles.actionButtonEmoji}>💬</Text>
           <Text style={styles.actionButtonLabel}>Inquiry</Text>
         </Pressable>
@@ -430,7 +445,12 @@ export default function PropertyDetailScreen({ route, navigation }) {
       )}
 
       {/* Inquiry Modal */}
-      <Modal visible={inquiryModalVisible} transparent animationType="slide">
+      <Modal
+        visible={inquiryModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={closeInquiryModal}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Send Inquiry</Text>
@@ -439,6 +459,7 @@ export default function PropertyDetailScreen({ route, navigation }) {
               placeholder="Subject"
               value={inquirySubject}
               onChangeText={setInquirySubject}
+              accessibilityLabel="Inquiry subject"
             />
             <TextInput
               style={[styles.modalInput, styles.modalInputLarge]}
@@ -447,20 +468,35 @@ export default function PropertyDetailScreen({ route, navigation }) {
               numberOfLines={4}
               value={inquiryMessage}
               onChangeText={setInquiryMessage}
+              accessibilityLabel="Inquiry message"
             />
             <TextInput
               style={styles.modalInput}
               placeholder="Contact Number"
-              keyboardType="number-pad"
+              keyboardType="phone-pad"
               maxLength={10}
               value={inquiryContact}
               onChangeText={(text) => setInquiryContact(text.replace(/\D/g, "").slice(0, 10))}
+              autoComplete="tel"
+              textContentType="telephoneNumber"
+              accessibilityLabel="Contact number"
+              accessibilityHint="A 10-digit phone number for the property owner to reply to"
             />
             <View style={styles.modalButtons}>
-              <Pressable style={styles.cancelBtn} onPress={() => setInquiryModalVisible(false)}>
+              <Pressable
+                style={styles.cancelBtn}
+                onPress={closeInquiryModal}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel inquiry"
+              >
                 <Text style={styles.cancelText}>Cancel</Text>
               </Pressable>
-              <Pressable style={styles.submitBtn} onPress={handleSendInquiry}>
+              <Pressable
+                style={styles.submitBtn}
+                onPress={handleSendInquiry}
+                accessibilityRole="button"
+                accessibilityLabel="Send inquiry"
+              >
                 <Text style={styles.submitText}>Send</Text>
               </Pressable>
             </View>
@@ -469,7 +505,12 @@ export default function PropertyDetailScreen({ route, navigation }) {
       </Modal>
 
       {/* Appointment Modal */}
-      <Modal visible={appointmentModalVisible} transparent animationType="slide">
+      <Modal
+        visible={appointmentModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={closeAppointmentModal}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Book Appointment</Text>
@@ -515,12 +556,23 @@ export default function PropertyDetailScreen({ route, navigation }) {
               placeholder="Purpose (e.g., Property viewing)"
               value={appointmentPurpose}
               onChangeText={setAppointmentPurpose}
+              accessibilityLabel="Appointment purpose"
             />
             <View style={styles.modalButtons}>
-              <Pressable style={styles.cancelBtn} onPress={() => setAppointmentModalVisible(false)}>
+              <Pressable
+                style={styles.cancelBtn}
+                onPress={closeAppointmentModal}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel appointment"
+              >
                 <Text style={styles.cancelText}>Cancel</Text>
               </Pressable>
-              <Pressable style={styles.submitBtn} onPress={handleBookAppointment}>
+              <Pressable
+                style={styles.submitBtn}
+                onPress={handleBookAppointment}
+                accessibilityRole="button"
+                accessibilityLabel="Book appointment"
+              >
                 <Text style={styles.submitText}>Book</Text>
               </Pressable>
             </View>
@@ -633,6 +685,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#d1d5db",
     borderRadius: 8,
+    minHeight: 44,
     paddingVertical: 12,
     paddingHorizontal: 8,
     alignItems: "center",
@@ -748,6 +801,7 @@ const styles = StyleSheet.create({
     marginTop: 16
   },
   cancelBtn: {
+    minHeight: 44,
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
@@ -758,6 +812,7 @@ const styles = StyleSheet.create({
     fontWeight: "600"
   },
   submitBtn: {
+    minHeight: 44,
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
@@ -771,6 +826,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#d1d5db",
     borderRadius: 8,
+    minHeight: 44,
     padding: 10,
     marginBottom: 12,
     backgroundColor: "#fff"
