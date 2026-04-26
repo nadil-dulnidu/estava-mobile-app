@@ -14,8 +14,7 @@ import {
   Platform
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import * as ImagePicker from "expo-image-picker";
-import { deleteProperty, getPropertyById, updateProperty } from "../api/propertyApi";
+import { getPropertyById, updateProperty } from "../api/propertyApi";
 import { favoriteApi } from "../api/favoriteApi";
 import { inquiryApi } from "../api/inquiryApi";
 import { appointmentApi } from "../api/appointmentApi";
@@ -35,7 +34,6 @@ export default function PropertyDetailScreen({ route, navigation }) {
   const [reviewsError, setReviewsError] = useState("");
   const [ownerActionLoading, setOwnerActionLoading] = useState(false);
   const [favoriteActionLoading, setFavoriteActionLoading] = useState(false);
-  const [ownerImageUploadLoading, setOwnerImageUploadLoading] = useState(false);
 
   // Inquiry modal state
   const [inquiryModalVisible, setInquiryModalVisible] = useState(false);
@@ -175,67 +173,12 @@ export default function PropertyDetailScreen({ route, navigation }) {
     }
   };
 
-  const handleDeleteProperty = () => {
-    if (!isOwner || ownerActionLoading) {
+  const handleOpenEditProperty = () => {
+    if (!isOwner) {
       return;
     }
 
-    Alert.alert("Delete Listing", "Are you sure you want to delete this property listing?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          setOwnerActionLoading(true);
-          try {
-            await deleteProperty(propertyId);
-            Alert.alert("Success", "Property deleted successfully", [
-              { text: "OK", onPress: () => navigation.goBack() }
-            ]);
-          } catch (deleteError) {
-            Alert.alert("Error", deleteError?.response?.data?.message || "Failed to delete property");
-          } finally {
-            setOwnerActionLoading(false);
-          }
-        }
-      }
-    ]);
-  };
-
-  const handleAddPropertyPhotos = async () => {
-    if (!isOwner || ownerActionLoading || ownerImageUploadLoading) {
-      return;
-    }
-
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permissionResult.granted) {
-      Alert.alert("Permission needed", "Allow media library access to upload property images.");
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsMultipleSelection: true,
-      quality: 0.85,
-      selectionLimit: 8
-    });
-
-    if (result.canceled || !Array.isArray(result.assets) || result.assets.length === 0) {
-      return;
-    }
-
-    setOwnerImageUploadLoading(true);
-    try {
-      const updated = await updateProperty(propertyId, {
-        images: result.assets
-      });
-      setProperty(updated);
-      Alert.alert("Success", "Photos added successfully");
-    } catch (err) {
-      Alert.alert("Error", getSafeErrorMessage("Failed to add photos", err));
-    } finally {
-      setOwnerImageUploadLoading(false);
-    }
+    navigation.navigate("EditProperty", { propertyId: property._id });
   };
 
   const handleAddFavorite = async () => {
@@ -298,6 +241,12 @@ export default function PropertyDetailScreen({ route, navigation }) {
       Alert.alert("Error", "All fields are required");
       return;
     }
+
+    if (!/^[0-9]{10}$/.test(inquiryContact.trim())) {
+      Alert.alert("Error", "Contact number must be exactly 10 digits");
+      return;
+    }
+
     try {
       await inquiryApi.sendInquiry({
         propertyId,
@@ -367,7 +316,7 @@ export default function PropertyDetailScreen({ route, navigation }) {
       {isOwner ? (
         <>
           <Text style={styles.sectionTitle}>Owner Controls</Text>
-          <Text style={styles.ownerHint}>Only you can manage this listing status or remove it.</Text>
+          <Text style={styles.ownerHint}>Only you can manage this listing status from here. Use Edit Property for everything else.</Text>
           <View style={styles.statusChipRow}>
             {["available", "rented", "delisted", "sold"].map((statusOption) => (
               <Pressable
@@ -391,21 +340,8 @@ export default function PropertyDetailScreen({ route, navigation }) {
               </Pressable>
             ))}
           </View>
-          <Pressable
-            style={[styles.deleteListingButton, ownerActionLoading && styles.disabledControl]}
-            onPress={handleDeleteProperty}
-            disabled={ownerActionLoading}
-          >
-            <Text style={styles.deleteListingText}>Delete Listing</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.addPhotosButton, ownerImageUploadLoading && styles.disabledControl]}
-            onPress={handleAddPropertyPhotos}
-            disabled={ownerImageUploadLoading}
-          >
-            <Text style={styles.addPhotosText}>
-              {ownerImageUploadLoading ? "Uploading..." : "Add More Photos"}
-            </Text>
+          <Pressable style={styles.editListingButton} onPress={handleOpenEditProperty}>
+            <Text style={styles.editListingText}>Edit Property</Text>
           </Pressable>
         </>
       ) : null}
@@ -515,9 +451,10 @@ export default function PropertyDetailScreen({ route, navigation }) {
             <TextInput
               style={styles.modalInput}
               placeholder="Contact Number"
-              keyboardType="phone-pad"
+              keyboardType="number-pad"
+              maxLength={10}
               value={inquiryContact}
-              onChangeText={setInquiryContact}
+              onChangeText={(text) => setInquiryContact(text.replace(/\D/g, "").slice(0, 10))}
             />
             <View style={styles.modalButtons}>
               <Pressable style={styles.cancelBtn} onPress={() => setInquiryModalVisible(false)}>
@@ -654,17 +591,17 @@ const styles = StyleSheet.create({
   statusChipTextActive: {
     color: "#ffffff"
   },
-  deleteListingButton: {
-    backgroundColor: "#fee2e2",
-    borderColor: "#ef4444",
+  editListingButton: {
+    backgroundColor: "#dbeafe",
+    borderColor: "#1d4ed8",
     borderWidth: 1,
     borderRadius: 8,
     paddingVertical: 10,
     alignItems: "center",
     marginBottom: 6
   },
-  deleteListingText: {
-    color: "#b91c1c",
+  editListingText: {
+    color: "#1d4ed8",
     fontWeight: "700"
   },
   addPhotosButton: {

@@ -5,7 +5,9 @@ import LoginScreen from "../screens/LoginScreen";
 import RegisterScreen from "../screens/RegisterScreen";
 import HomeScreen from "../screens/HomeScreen";
 import PropertyListScreen from "../screens/PropertyListScreen";
+import MyPropertiesScreen from "../screens/MyPropertiesScreen";
 import PropertyDetailScreen from "../screens/PropertyDetailScreen";
+import EditPropertyScreen from "../screens/EditPropertyScreen";
 import FavoritesScreen from "../screens/FavoritesScreen";
 import InquiriesScreen from "../screens/InquiriesScreen";
 import AppointmentsScreen from "../screens/AppointmentsScreen";
@@ -30,6 +32,11 @@ export default function AppNavigator() {
             options={{ title: "Properties" }}
           />
           <Stack.Screen
+            name="MyProperties"
+            component={MyPropertiesScreen}
+            options={{ title: "My Properties" }}
+          />
+          <Stack.Screen
             name="CreateProperty"
             component={CreatePropertyScreen}
             options={{ title: "Post Property" }}
@@ -38,6 +45,11 @@ export default function AppNavigator() {
             name="PropertyDetail"
             component={PropertyDetailScreen}
             options={{ title: "Property Details" }}
+          />
+          <Stack.Screen
+            name="EditProperty"
+            component={EditPropertyScreen}
+            options={{ title: "Edit Property" }}
           />
           <Stack.Screen
             name="Favorites"

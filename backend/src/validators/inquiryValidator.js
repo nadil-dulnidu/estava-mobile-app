@@ -26,6 +26,13 @@ const ensureNoUnexpectedFields = (payload, allowedFields) => {
   }
 };
 
+const ensureTenDigitPhoneNumber = (value, fieldName = "contactNumber") => {
+  const normalized = String(value ?? "").trim();
+  if (!/^\d{10}$/.test(normalized)) {
+    throw new AppError(`${fieldName} must be exactly 10 digits`, 400);
+  }
+};
+
 const validateInquiryIdParam = (id) => {
   if (!id || !mongoose.Types.ObjectId.isValid(id)) {
     throw new AppError("Invalid inquiry id", 400);
@@ -61,10 +68,7 @@ const validateCreateInquiryInput = (payload) => {
   }
 
   if (contactNumber !== undefined) {
-    const normalizedContact = String(contactNumber).trim();
-    if (normalizedContact.length > 40) {
-      throw new AppError("contactNumber must be 40 characters or less", 400);
-    }
+    ensureTenDigitPhoneNumber(contactNumber);
   }
 };
 
@@ -110,10 +114,7 @@ const validateUpdateInquiryInput = (payload) => {
   }
 
   if (payload.contactNumber !== undefined) {
-    const normalizedContact = String(payload.contactNumber).trim();
-    if (normalizedContact.length > 40) {
-      throw new AppError("contactNumber must be 40 characters or less", 400);
-    }
+    ensureTenDigitPhoneNumber(payload.contactNumber);
   }
 
   if (nextStatus !== undefined && !validStatuses.includes(nextStatus)) {

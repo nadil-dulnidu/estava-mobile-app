@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { inquiryApi } from "../api/inquiryApi";
 import { useAuth } from "../context/AuthContext";
+import { isTenDigitPhoneNumber, normalizePhoneNumber } from "../utils/phoneNumber";
 
 const getApiErrorMessage = (error, fallbackMessage) => {
   return error?.response?.data?.message || error?.message || fallbackMessage;
@@ -178,8 +179,8 @@ export default function InquiriesScreen() {
       return;
     }
 
-    if (contactNumber.length > 40) {
-      setError("Contact number must be 40 characters or less");
+    if (!isTenDigitPhoneNumber(contactNumber)) {
+      setError("Contact number must be exactly 10 digits");
       return;
     }
 
@@ -191,7 +192,7 @@ export default function InquiriesScreen() {
       await inquiryApi.updateInquiryDetails(editInquiry._id, {
         subject,
         message,
-        contactNumber
+        contactNumber: normalizePhoneNumber(contactNumber)
       });
       closeEditInquiryModal();
       await loadInquiries();
@@ -406,10 +407,10 @@ export default function InquiriesScreen() {
             <TextInput
               style={styles.modalInput}
               placeholder="Contact Number"
-              keyboardType="phone-pad"
+              keyboardType="number-pad"
+              maxLength={10}
               value={editContact}
-              onChangeText={setEditContact}
-              maxLength={40}
+              onChangeText={(text) => setEditContact(normalizePhoneNumber(text))}
             />
             <View style={styles.modalButtons}>
               <Pressable style={styles.cancelBtn} onPress={closeEditInquiryModal} disabled={actionLoading}>

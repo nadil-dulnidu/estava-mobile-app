@@ -104,9 +104,14 @@ export default function PropertyListScreen({ navigation }) {
   return (
     <View style={styles.container}>
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Pressable style={styles.postOwnButton} onPress={() => navigation.navigate("CreateProperty")}>
-        <Text style={styles.postOwnButtonText}>Post your own property</Text>
-      </Pressable>
+      <View style={styles.topActionRow}>
+        <Pressable style={[styles.topActionButton, styles.secondaryActionButton]} onPress={() => navigation.navigate("MyProperties")}>
+          <Text style={styles.secondaryActionText}>My Properties</Text>
+        </Pressable>
+        <Pressable style={[styles.topActionButton, styles.primaryActionButton]} onPress={() => navigation.navigate("CreateProperty")}>
+          <Text style={styles.primaryActionText}>Post your own property</Text>
+        </Pressable>
+      </View>
       <FlatList
         data={items}
         keyExtractor={(item) => item._id}
@@ -168,17 +173,31 @@ const styles = StyleSheet.create({
     marginTop: 16,
     color: "#b91c1c"
   },
-  postOwnButton: {
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 2,
-    backgroundColor: "#1d4ed8",
+  topActionRow: {
+    flexDirection: "row",
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 2
+  },
+  topActionButton: {
+    flex: 1,
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: "center"
   },
-  postOwnButtonText: {
+  primaryActionButton: {
+    backgroundColor: "#1d4ed8"
+  },
+  primaryActionText: {
     color: "#ffffff",
+    fontWeight: "700"
+  },
+  secondaryActionButton: {
+    backgroundColor: "#e5e7eb"
+  },
+  secondaryActionText: {
+    color: "#374151",
     fontWeight: "700"
   }
 });
