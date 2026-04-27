@@ -329,8 +329,10 @@ const styles = StyleSheet.create({
     backgroundColor: estavaCore.colors.background
   },
   content: {
-    padding: 16,
-    paddingBottom: 28
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 28,
+    gap: 2
   },
   title: {
     fontSize: 24,
@@ -348,10 +350,11 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: estavaCore.colors.border
+    borderColor: estavaCore.colors.border,
+    ...estavaCore.shadow.card
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "700",
     color: estavaCore.colors.primary,
     marginBottom: 10
@@ -395,7 +398,7 @@ const styles = StyleSheet.create({
     borderColor: estavaCore.colors.border,
     borderRadius: 8,
     paddingHorizontal: 10,
-    paddingVertical: 10,
+    paddingVertical: 11,
     backgroundColor: estavaCore.colors.surface,
     marginBottom: 12,
     color: estavaCore.colors.textPrimary
@@ -403,7 +406,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     backgroundColor: estavaCore.colors.primary,
     borderRadius: 8,
-    minHeight: 42,
+    minHeight: 44,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 14
@@ -417,7 +420,7 @@ const styles = StyleSheet.create({
     borderColor: estavaCore.colors.accent,
     backgroundColor: estavaCore.colors.accentSoft,
     borderRadius: 8,
-    minHeight: 42,
+    minHeight: 44,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 14

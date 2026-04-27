@@ -326,6 +326,18 @@ export default function PropertyDetailScreen({ route, navigation }) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {Array.isArray(property.imageUrls) && property.imageUrls.length > 0 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageRow}>
+          {property.imageUrls.map((url) => (
+            <Image key={url} source={{ uri: url }} style={styles.image} />
+          ))}
+        </ScrollView>
+      ) : (
+        <View style={styles.imageEmpty}>
+          <Text style={styles.imageEmptyText}>No property images</Text>
+        </View>
+      )}
+
       <Text style={styles.title}>{property.title}</Text>
       <Text style={styles.location}>{property.location}</Text>
       <Text style={styles.price}>LKR {Number(property.price || 0).toLocaleString()}</Text>
@@ -387,22 +399,18 @@ export default function PropertyDetailScreen({ route, navigation }) {
         </Pressable>
       </View>
 
-      {Array.isArray(property.imageUrls) && property.imageUrls.length > 0 ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageRow}>
-          {property.imageUrls.map((url) => (
-            <Image key={url} source={{ uri: url }} style={styles.image} />
-          ))}
-        </ScrollView>
-      ) : null}
-
       <Text style={styles.sectionTitle}>Description</Text>
-      <Text style={styles.body}>{property.description}</Text>
+      <View style={styles.sectionCard}>
+        <Text style={styles.body}>{property.description}</Text>
+      </View>
 
       <Text style={styles.sectionTitle}>Details</Text>
-      <Text style={styles.body}>Type: {property.propertyType}</Text>
-      <Text style={styles.body}>Bedrooms: {property.bedrooms ?? 0}</Text>
-      <Text style={styles.body}>Bathrooms: {property.bathrooms ?? 0}</Text>
-      <Text style={styles.body}>Area Size: {property.areaSize ?? 0}</Text>
+      <View style={styles.sectionCard}>
+        <Text style={styles.body}>Type: {property.propertyType}</Text>
+        <Text style={styles.body}>Bedrooms: {property.bedrooms ?? 0}</Text>
+        <Text style={styles.body}>Bathrooms: {property.bathrooms ?? 0}</Text>
+        <Text style={styles.body}>Area Size: {property.areaSize ?? 0}</Text>
+      </View>
 
       {Array.isArray(property.features) && property.features.length > 0 ? (
         <>
@@ -438,17 +446,19 @@ export default function PropertyDetailScreen({ route, navigation }) {
       </Text>
       {reviewsError ? <Text style={styles.error}>{reviewsError}</Text> : null}
 
-      {reviews.length === 0 ? (
-        <Text style={styles.body}>No reviews yet.</Text>
-      ) : (
-        reviews.map((review) => (
-          <View key={review._id} style={styles.reviewCard}>
-            <Text style={styles.reviewAuthor}>{review.userId?.fullName || "Anonymous user"}</Text>
-            <Text style={styles.reviewStars}>{renderStars(review.rating)}</Text>
-            <Text style={styles.reviewComment}>{review.comment || "No comment provided."}</Text>
-          </View>
-        ))
-      )}
+      <View style={styles.sectionCard}>
+        {reviews.length === 0 ? (
+          <Text style={styles.body}>No reviews yet.</Text>
+        ) : (
+          reviews.map((review) => (
+            <View key={review._id} style={styles.reviewCard}>
+              <Text style={styles.reviewAuthor}>{review.userId?.fullName || "Anonymous user"}</Text>
+              <Text style={styles.reviewStars}>{renderStars(review.rating)}</Text>
+              <Text style={styles.reviewComment}>{review.comment || "No comment provided."}</Text>
+            </View>
+          ))
+        )}
+      </View>
 
       {/* Inquiry Modal */}
       <Modal
@@ -595,7 +605,8 @@ const styles = StyleSheet.create({
     backgroundColor: estavaCore.colors.background
   },
   content: {
-    padding: 16
+    padding: 16,
+    paddingBottom: 24
   },
   centered: {
     flex: 1,
@@ -707,14 +718,36 @@ const styles = StyleSheet.create({
     color: estavaCore.colors.textPrimary
   },
   imageRow: {
-    marginTop: 16
+    marginBottom: 12
   },
   image: {
-    width: 220,
-    height: 140,
+    width: 292,
+    height: 204,
     borderRadius: 12,
     marginRight: 10,
-    backgroundColor: "#d1d5db"
+    backgroundColor: estavaCore.colors.surfaceMuted
+  },
+  imageEmpty: {
+    marginBottom: 12,
+    height: 204,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
+    backgroundColor: estavaCore.colors.surfaceMuted,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  imageEmptyText: {
+    color: estavaCore.colors.textSecondary,
+    fontWeight: "600"
+  },
+  sectionCard: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
+    backgroundColor: estavaCore.colors.surface,
+    padding: 12,
+    ...estavaCore.shadow.card
   },
   amenitiesGrid: {
     backgroundColor: estavaCore.colors.surface,
@@ -769,7 +802,10 @@ const styles = StyleSheet.create({
     borderColor: estavaCore.colors.border,
     borderRadius: 10,
     padding: 12,
-    marginBottom: 10
+    marginBottom: 10,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: estavaCore.colors.border
   },
   reviewAuthor: {
     color: estavaCore.colors.textPrimary,

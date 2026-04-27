@@ -241,7 +241,13 @@ export default function InquiriesScreen() {
   const filtered = activeTab === "incoming" ? incoming : sent;
   const isEditingResponse = responseMode === "edit";
 
-  if (loading) return <ActivityIndicator style={{ marginTop: 20 }} size="large" />;
+  if (loading) {
+    return (
+      <View style={styles.loadingWrap}>
+        <ActivityIndicator style={{ marginTop: 20 }} size="large" color={estavaCore.colors.accent} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -499,6 +505,10 @@ export default function InquiriesScreen() {
 }
 
 const styles = StyleSheet.create({
+  loadingWrap: {
+    flex: 1,
+    backgroundColor: estavaCore.colors.background
+  },
   container: { flex: 1, padding: 16, backgroundColor: estavaCore.colors.background },
   title: { fontSize: 24, fontWeight: "700", marginBottom: 16, color: estavaCore.colors.primary },
   error: { color: estavaCore.colors.danger, marginBottom: 8 },
@@ -520,7 +530,7 @@ const styles = StyleSheet.create({
   tabButton: {
     flex: 1,
     backgroundColor: estavaCore.colors.surfaceMuted,
-    borderRadius: 8,
+    borderRadius: 10,
     minHeight: 44,
     paddingVertical: 10,
     alignItems: "center",
@@ -535,7 +545,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: estavaCore.colors.accentSoft,
     borderWidth: 1,
-    borderColor: estavaCore.colors.border
+    borderColor: estavaCore.colors.border,
+    marginBottom: 4
   },
   responseLabel: { fontSize: 12, fontWeight: "700", color: estavaCore.colors.accent },
   responseText: { marginTop: 4, color: estavaCore.colors.textPrimary },
@@ -584,8 +595,8 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: estavaCore.colors.surface,
     padding: 16,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18
   },
   modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12 },
   modalInput: {

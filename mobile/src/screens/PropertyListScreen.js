@@ -8,7 +8,8 @@ import {
   Pressable,
   ActivityIndicator,
   RefreshControl,
-  ScrollView
+  ScrollView,
+  Image
 } from "react-native";
 import { getMyProperties, getProperties } from "../api/propertyApi";
 import { useAuth } from "../context/AuthContext";
@@ -137,11 +138,23 @@ export default function PropertyListScreen({ navigation }) {
       accessibilityRole="button"
       accessibilityLabel={item.title}
     >
+      {Array.isArray(item?.imageUrls) && item.imageUrls[0] ? (
+        <Image source={{ uri: item.imageUrls[0] }} style={styles.cardImage} />
+      ) : (
+        <View style={styles.cardImagePlaceholder}>
+          <Text style={styles.cardImagePlaceholderText}>No image</Text>
+        </View>
+      )}
+      <View style={styles.cardContent}>
       <Text style={styles.title}>{item.title}</Text>
       <Text style={styles.location}>{item.location}</Text>
       <View style={styles.cardFooter}>
         <Text style={styles.price}>LKR {Number(item.price || 0).toLocaleString()}</Text>
-        <Text style={styles.type}>{item.propertyType || "Property"}</Text>
+        <View style={styles.metaChips}>
+          <Text style={styles.type}>{item.propertyType || "Property"}</Text>
+          <Text style={styles.statusChip}>{String(item?.listingStatus || "Available")}</Text>
+        </View>
+      </View>
       </View>
     </Pressable>
   );
@@ -187,6 +200,21 @@ export default function PropertyListScreen({ navigation }) {
           </Text>
         </Pressable>
       </View>
+
+      {(selectedPrice !== "all" || selectedType !== "all") && (
+        <View style={styles.activeFilterRow}>
+          <Text style={styles.activeFilterLabel}>Active filters:</Text>
+          <Pressable
+            style={styles.clearFilterButton}
+            onPress={() => {
+              setSelectedPrice("all");
+              setSelectedType("all");
+            }}
+          >
+            <Text style={styles.clearFilterText}>Clear all</Text>
+          </Pressable>
+        </View>
+      )}
 
       {showPriceFilter && (
         <ScrollView style={styles.dropdown}>
@@ -295,6 +323,30 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: estavaCore.colors.border
   },
+  activeFilterRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: estavaCore.colors.surface
+  },
+  activeFilterLabel: {
+    color: estavaCore.colors.textSecondary,
+    fontSize: 12,
+    fontWeight: "600"
+  },
+  clearFilterButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: estavaCore.colors.surfaceMuted
+  },
+  clearFilterText: {
+    color: estavaCore.colors.primary,
+    fontWeight: "700",
+    fontSize: 12
+  },
   filterButton: {
     flex: 1,
     paddingVertical: 10,
@@ -396,15 +448,30 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: estavaCore.colors.surface,
     borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
     borderWidth: 1,
     borderColor: estavaCore.colors.border,
-    shadowColor: "#000000",
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1
+    overflow: "hidden",
+    ...estavaCore.shadow.card
+  },
+  cardImage: {
+    width: "100%",
+    height: 152,
+    backgroundColor: estavaCore.colors.surfaceMuted
+  },
+  cardImagePlaceholder: {
+    width: "100%",
+    height: 152,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: estavaCore.colors.surfaceMuted
+  },
+  cardImagePlaceholderText: {
+    color: estavaCore.colors.textSecondary,
+    fontWeight: "600"
+  },
+  cardContent: {
+    paddingVertical: 12,
+    paddingHorizontal: 14
   },
   title: {
     fontSize: 16,
@@ -425,6 +492,10 @@ const styles = StyleSheet.create({
     borderTopColor: estavaCore.colors.border,
     borderTopWidth: 1
   },
+  metaChips: {
+    flexDirection: "row",
+    gap: 6
+  },
   price: {
     fontSize: 16,
     fontWeight: "700",
@@ -437,6 +508,15 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 8,
     backgroundColor: estavaCore.colors.surfaceMuted,
+    borderRadius: 6
+  },
+  statusChip: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: estavaCore.colors.accent,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    backgroundColor: estavaCore.colors.accentSoft,
     borderRadius: 6
   },
   empty: {

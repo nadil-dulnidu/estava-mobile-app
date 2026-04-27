@@ -121,6 +121,7 @@ export default function HomeScreen({ navigation }) {
           <View>
             <Text style={styles.headerCaption}>Estava Real Estate</Text>
             <Text style={styles.headerTitle}>Welcome back, {user?.fullName || "User"}</Text>
+            <Text style={styles.headerSubline}>Browse curated listings and manage your activity</Text>
           </View>
           <View style={styles.headerActions}>
             <Pressable style={styles.iconButton} onPress={() => navigation.navigate("Notifications")}>
@@ -151,6 +152,7 @@ export default function HomeScreen({ navigation }) {
           <FlatList
             data={featuredProperties}
             horizontal
+            scrollEnabled
             keyExtractor={(item) => item._id}
             renderItem={({ item }) => renderPropertyCard(item, true)}
             showsHorizontalScrollIndicator={false}
@@ -228,10 +230,17 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     marginTop: 4,
-    fontSize: 20,
-    fontWeight: "700",
+    fontSize: estavaCore.typography.h2.fontSize,
+    fontWeight: estavaCore.typography.h2.fontWeight,
     color: estavaCore.colors.primary,
     maxWidth: 230
+  },
+  headerSubline: {
+    marginTop: 6,
+    color: estavaCore.colors.textSecondary,
+    maxWidth: 220,
+    lineHeight: 18,
+    fontSize: 12
   },
   headerActions: {
     flexDirection: "row",
@@ -274,15 +283,15 @@ const styles = StyleSheet.create({
     fontWeight: "600"
   },
   sectionHead: {
-    marginTop: estavaCore.spacing.md,
+    marginTop: estavaCore.spacing.lg,
     marginBottom: estavaCore.spacing.sm,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center"
   },
   sectionTitle: {
-    fontSize: 17,
-    fontWeight: "700",
+    fontSize: estavaCore.typography.h3.fontSize,
+    fontWeight: estavaCore.typography.h3.fontWeight,
     color: estavaCore.colors.primary
   },
   sectionLink: {
@@ -299,7 +308,7 @@ const styles = StyleSheet.create({
     justifyContent: "center"
   },
   horizontalList: {
-    paddingRight: 4,
+    paddingRight: 8,
     gap: estavaCore.spacing.md
   },
   propertyCard: {
@@ -307,14 +316,15 @@ const styles = StyleSheet.create({
     borderColor: estavaCore.colors.border,
     backgroundColor: estavaCore.colors.surface,
     borderRadius: estavaCore.radius.md,
-    overflow: "hidden"
+    overflow: "hidden",
+    ...estavaCore.shadow.card
   },
   propertyCardCompact: {
-    width: 220
+    width: 248
   },
   propertyImage: {
     width: "100%",
-    height: 132,
+    height: 148,
     backgroundColor: estavaCore.colors.surfaceMuted
   },
   imagePlaceholder: {
@@ -352,19 +362,20 @@ const styles = StyleSheet.create({
     gap: estavaCore.spacing.sm
   },
   menuItem: {
-    width: "31%",
-    minHeight: 52,
+    width: "48%",
+    minHeight: 58,
     borderRadius: estavaCore.radius.sm,
     borderWidth: 1,
     borderColor: estavaCore.colors.border,
     backgroundColor: estavaCore.colors.surface,
     alignItems: "center",
-    justifyContent: "center"
+    justifyContent: "center",
+    ...estavaCore.shadow.card
   },
   menuItemText: {
     color: estavaCore.colors.textPrimary,
     fontWeight: "600",
-    fontSize: 12,
+    fontSize: 13,
     textAlign: "center"
   },
   stackList: {
@@ -400,7 +411,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    height: 68,
+    height: 72,
     flexDirection: "row",
     borderTopWidth: 1,
     borderTopColor: estavaCore.colors.border,
@@ -412,7 +423,9 @@ const styles = StyleSheet.create({
     justifyContent: "center"
   },
   footerItemActive: {
-    backgroundColor: estavaCore.colors.accentSoft
+    backgroundColor: estavaCore.colors.accentSoft,
+    borderTopWidth: 2,
+    borderTopColor: estavaCore.colors.accent
   },
   footerItemText: {
     color: estavaCore.colors.textSecondary,
