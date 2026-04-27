@@ -1,54 +1,19 @@
-  amenitiesGrid: {
-    backgroundColor: "#ffffff",
-    borderRadius: 8,
-    container: {
-      flex: 1,
-      backgroundColor: "#f7f9fb"
-    },
-    centered: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      backgroundColor: "#f7f9fb"
-    },
-    content: {
-      paddingHorizontal: 16,
-      paddingVertical: 16,
-      paddingBottom: 32
-    },
-    title: {
-      fontSize: 24,
-      fontWeight: "800",
-      color: "#000000"
-    },
-    location: {
-      marginTop: 8,
-      fontSize: 14,
-      color: "#45464d"
-    },
-    price: {
-      marginTop: 8,
-      fontSize: 20,
-      fontWeight: "800",
-      color: "#059669"
-    },
-    status: {
-      marginTop: 8,
-      fontSize: 14,
-      color: "#45464d"
-    },
-    sectionTitle: {
-      fontSize: 18,
-      fontWeight: "700",
-      marginTop: 20,
-      marginBottom: 12,
-      color: "#000000"
-    },
-    body: {
-      fontSize: 14,
-      color: "#191c1e",
-      lineHeight: 20
-    },
+// Screen component for user-facing workflow in the real-estate mobile app.
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  ScrollView,
+  Image,
+  Pressable,
+  Modal,
+  TextInput,
+  Alert,
+  Platform
+} from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { getPropertyById, updateProperty } from "../api/propertyApi";
 import { favoriteApi } from "../api/favoriteApi";
 import { inquiryApi } from "../api/inquiryApi";
@@ -754,6 +719,25 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginRight: 10,
     backgroundColor: "#d1d5db"
+  },
+  amenitiesGrid: {
+    backgroundColor: "#ffffff",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 6
+  },
+  amenityItem: {
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f3f4f6"
+  },
+  amenityText: {
+    color: "#374151",
+    fontSize: 14,
+    fontWeight: "500"
   },
   sectionTitle: {
     marginTop: 20,
