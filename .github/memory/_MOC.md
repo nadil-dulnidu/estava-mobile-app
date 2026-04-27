@@ -20,11 +20,9 @@ tags:
 ## Active Patterns
 <!-- Coder/Designer append here: - [[patterns/slug]] — one-line summary -->
 - [[patterns/auth-profile-endpoints]] — protected auth profile read/update/password/avatar pattern with normalized user payload
-- [[patterns/profile-route-hardening-and-client-url-guard]] — normalize mobile API base URL + map JWT verify failures to safe 401
 
 ## Learnings
 <!-- Any agent appends here: - [[learnings/slug]] — one-line summary -->
-- [[learnings/npm-cmd-powershell-policy]] — use npm.cmd in PowerShell when npm.ps1 blocked by execution policy
 
 ## Reviews
 <!-- Code-reviewer/Security-auditor/UX-reviewer append here: - [[reviews/YYYY-MM-DD-type-slug]] — one-line summary -->
