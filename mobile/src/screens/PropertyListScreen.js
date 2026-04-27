@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { getMyProperties, getProperties } from "../api/propertyApi";
 import { useAuth } from "../context/AuthContext";
+import { estavaCore } from "../theme/estavaCore";
 
 const resolveUserId = (entity) => {
   if (!entity) return "";
@@ -148,7 +149,7 @@ export default function PropertyListScreen({ navigation }) {
   if (loading && !refreshing) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#059669" />
+        <ActivityIndicator size="large" color={estavaCore.colors.accent} />
       </View>
     );
   }
@@ -277,22 +278,22 @@ export default function PropertyListScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f7f9fb"
+    backgroundColor: estavaCore.colors.background
   },
   centered: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f7f9fb"
+    backgroundColor: estavaCore.colors.background
   },
   filtersContainer: {
     flexDirection: "row",
     gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: "#ffffff",
+    backgroundColor: estavaCore.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: "#e0e3e5"
+    borderBottomColor: estavaCore.colors.border
   },
   filterButton: {
     flex: 1,
@@ -300,30 +301,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#c6c6cd",
-    backgroundColor: "#f7f9fb",
+    borderColor: estavaCore.colors.border,
+    backgroundColor: estavaCore.colors.background,
     alignItems: "center"
   },
   filterButtonActive: {
-    borderColor: "#059669",
-    backgroundColor: "#e8f5ef"
+    borderColor: estavaCore.colors.accent,
+    backgroundColor: estavaCore.colors.accentSoft
   },
   filterLabel: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#45464d"
+    color: estavaCore.colors.textSecondary
   },
   filterValue: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#000000",
+    color: estavaCore.colors.primary,
     marginTop: 2
   },
   dropdown: {
     maxHeight: 200,
-    backgroundColor: "#ffffff",
+    backgroundColor: estavaCore.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: "#e0e3e5"
+    borderBottomColor: estavaCore.colors.border
   },
   dropdownItem: {
     paddingVertical: 12,
@@ -336,11 +337,11 @@ const styles = StyleSheet.create({
   },
   dropdownText: {
     fontSize: 14,
-    color: "#191c1e"
+    color: estavaCore.colors.textPrimary
   },
   dropdownTextActive: {
     fontWeight: "700",
-    color: "#059669"
+    color: estavaCore.colors.accent
   },
   error: {
     marginHorizontal: 16,
@@ -359,9 +360,9 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: "#ffffff",
+    backgroundColor: estavaCore.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: "#e0e3e5"
+    borderBottomColor: estavaCore.colors.border
   },
   topActionButton: {
     flex: 1,
@@ -370,7 +371,7 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   primaryActionButton: {
-    backgroundColor: "#000000"
+    backgroundColor: estavaCore.colors.primary
   },
   primaryActionText: {
     color: "#ffffff",
@@ -378,12 +379,12 @@ const styles = StyleSheet.create({
     fontSize: 14
   },
   secondaryActionButton: {
-    backgroundColor: "#eceef0",
+    backgroundColor: estavaCore.colors.surfaceMuted,
     borderWidth: 1,
-    borderColor: "#c6c6cd"
+    borderColor: estavaCore.colors.border
   },
   secondaryActionText: {
-    color: "#191c1e",
+    color: estavaCore.colors.textPrimary,
     fontWeight: "700",
     fontSize: 14
   },
@@ -393,12 +394,12 @@ const styles = StyleSheet.create({
     gap: 12
   },
   card: {
-    backgroundColor: "#ffffff",
+    backgroundColor: estavaCore.colors.surface,
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: "#e0e3e5",
+    borderColor: estavaCore.colors.border,
     shadowColor: "#000000",
     shadowOpacity: 0.04,
     shadowRadius: 2,
@@ -408,35 +409,34 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#000000"
+    color: estavaCore.colors.primary
   },
   location: {
     marginTop: 4,
     fontSize: 13,
-    color: "#45464d"
+    color: estavaCore.colors.textSecondary
   },
   cardFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginTop: 10,
-    paddingTopWidth: 1,
     paddingTop: 10,
-    borderTopColor: "#eceef0",
+    borderTopColor: estavaCore.colors.border,
     borderTopWidth: 1
   },
   price: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#059669"
+    color: estavaCore.colors.accent
   },
   type: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#45464d",
+    color: estavaCore.colors.textSecondary,
     paddingVertical: 4,
     paddingHorizontal: 8,
-    backgroundColor: "#eceef0",
+    backgroundColor: estavaCore.colors.surfaceMuted,
     borderRadius: 6
   },
   empty: {

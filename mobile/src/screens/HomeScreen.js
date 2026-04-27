@@ -1,413 +1,426 @@
-// Home Dashboard - displays featured & recommended properties with design system styling
-import React, { useEffect, useState } from "react";
-import { View, Text, Pressable, StyleSheet, ScrollView, Image, FlatList } from "react-native";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View
+} from "react-native";
+import { getProperties } from "../api/propertyApi";
 import { useAuth } from "../context/AuthContext";
+import { estavaCore } from "../theme/estavaCore";
+import { getRecentlyViewedPropertyIds } from "../utils/recentlyViewedProperties";
+
+const resolveUserId = (entity) => {
+  if (!entity) return "";
+  if (typeof entity === "string") return entity;
+  return entity._id || entity.id || "";
+};
+
+const getNameInitials = (name) => {
+  const words = String(name || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (!words.length) return "U";
+  if (words.length === 1) return words[0].charAt(0).toUpperCase();
+
+  return `${words[0].charAt(0)}${words[1].charAt(0)}`.toUpperCase();
+};
+
+const getCreatedAtTime = (item) => {
+  const createdAt = item?.createdAt || item?.updatedAt || 0;
+  const parsed = new Date(createdAt).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const fallbackMenu = [
+  { label: "Browse", route: "PropertyList" },
+  { label: "My Properties", route: "MyProperties" },
+  { label: "Post", route: "CreateProperty" },
+  { label: "Favorites", route: "Favorites" },
+  { label: "Inquiries", route: "Inquiries" },
+  { label: "Appointments", route: "Appointments" }
+];
+
+const footerLinks = [
+  { label: "Home", route: "Home" },
+  { label: "Properties", route: "PropertyList" },
+  { label: "Favorites", route: "Favorites" },
+  { label: "Profile", route: "Profile" }
+];
 
 export default function HomeScreen({ navigation }) {
   const { user, logout } = useAuth();
-  const [featuredProperties, setFeaturedProperties] = useState([]);
-  const [recommendedProperties, setRecommendedProperties] = useState([]);
+  const [properties, setProperties] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const profileInitial = String(user?.fullName || "").trim().charAt(0).toUpperCase() || "U";
+  const currentUserId = resolveUserId(user);
 
-  useEffect(() => {
-    // Mock featured properties (newest 3)
-    const mockFeatured = [
-      {
-        _id: "1",
-        title: "Modern Apartment",
-        price: 250000,
-        location: "Downtown",
-        imageUrls: ["https://via.placeholder.com/300x240?text=Featured+1"]
-      },
-      {
-        _id: "2",
-        title: "Luxury Villa",
-        price: 450000,
-        location: "Uptown",
-        imageUrls: ["https://via.placeholder.com/300x240?text=Featured+2"]
-      },
-      {
-        _id: "3",
-        title: "Cozy House",
-        price: 180000,
-        location: "Suburbs",
-        imageUrls: ["https://via.placeholder.com/300x240?text=Featured+3"]
-      }
-    ];
+  const loadDashboardData = useCallback(async () => {
+    setLoading(true);
+    setError("");
 
-    // Mock recommended properties (visited 3)
-    const mockRecommended = [
-      {
-        _id: "4",
-        title: "Beach House",
-        price: 550000,
-        location: "Coastal",
-        imageUrls: ["https://via.placeholder.com/380x200?text=Recommended+1"]
-      },
-      {
-        _id: "5",
-        title: "City Penthouse",
-        price: 800000,
-        location: "City Center",
-        imageUrls: ["https://via.placeholder.com/380x200?text=Recommended+2"]
-      },
-      {
-        _id: "6",
-        title: "Garden Estate",
-        price: 320000,
-        location: "Countryside",
-        imageUrls: ["https://via.placeholder.com/380x200?text=Recommended+3"]
-      }
-    ];
-
-    setFeaturedProperties(mockFeatured);
-    setRecommendedProperties(mockRecommended);
+    try {
+      const list = await getProperties({ page: 1, limit: 80 });
+      const items = Array.isArray(list?.items) ? list.items : [];
+      setProperties(items);
+    } catch (fetchError) {
+      setError(fetchError?.response?.data?.message || "Failed to load dashboard properties");
+      setProperties([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const menuItems = [
-    { label: "Browse", screen: "PropertyList", icon: "🏠" },
-    { label: "My Properties", screen: "MyProperties", icon: "🗂️" },
-    { label: "Post", screen: "CreateProperty", icon: "📢" },
-    { label: "Favorites", screen: "Favorites", icon: "❤️" },
-    { label: "Inquiries", screen: "Inquiries", icon: "💬" },
-    { label: "Appointments", screen: "Appointments", icon: "📅" },
-    { label: "Reviews", screen: "Reviews", icon: "⭐" }
-  ];
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
 
-  const PropertyCard = ({ property, isSmall = false }) => (
-    <Pressable
-      style={[styles.propertyCard, isSmall && styles.propertyCardSmall]}
-      onPress={() => navigation.navigate("PropertyDetail", { propertyId: property._id })}
-      accessibilityRole="button"
-      accessibilityLabel={property.title}
-    >
-      {property.imageUrls && property.imageUrls[0] && (
-        <Image
-          source={{ uri: property.imageUrls[0] }}
-          style={[styles.propertyImage, isSmall && styles.propertyImageSmall]}
-        />
-      )}
-      <View style={[styles.propertyInfo, isSmall && styles.propertyInfoSmall]}>
-        <Text style={styles.propertyTitle} numberOfLines={1}>
-          {property.title}
-        </Text>
-        <Text style={styles.propertyLocation}>{property.location}</Text>
-        <Text style={styles.propertyPrice}>LKR {Number(property.price || 0).toLocaleString()}</Text>
-      </View>
-    </Pressable>
-  );
+  const featuredProperties = useMemo(() => {
+    return [...properties].sort((a, b) => getCreatedAtTime(b) - getCreatedAtTime(a)).slice(0, 3);
+  }, [properties]);
+
+  const recommendedProperties = useMemo(() => {
+    const viewedIds = getRecentlyViewedPropertyIds(currentUserId, 3);
+    if (!viewedIds.length) return [];
+
+    return viewedIds
+      .map((id) => properties.find((item) => String(item?._id) === String(id)))
+      .filter(Boolean)
+      .slice(0, 3);
+  }, [currentUserId, properties]);
+
+  const renderPropertyCard = (item, compact = false) => {
+    const imageUrl = Array.isArray(item?.imageUrls) ? item.imageUrls[0] : "";
+    return (
+      <Pressable
+        key={item._id}
+        style={[styles.propertyCard, compact && styles.propertyCardCompact]}
+        onPress={() => navigation.navigate("PropertyDetail", { propertyId: item._id })}
+      >
+        {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.propertyImage} /> : <View style={styles.imagePlaceholder}><Text style={styles.imagePlaceholderText}>No image</Text></View>}
+        <View style={styles.propertyContent}>
+          <Text style={styles.propertyTitle} numberOfLines={1}>{item.title}</Text>
+          <Text style={styles.propertyMeta} numberOfLines={1}>{item.location || "Unknown location"}</Text>
+          <Text style={styles.propertyPrice}>LKR {Number(item.price || 0).toLocaleString()}</Text>
+        </View>
+      </Pressable>
+    );
+  };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header with Welcome, Notifications, and Profile */}
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.greeting}>Welcome back</Text>
-            <Text style={styles.userName}>{user?.fullName || "User"}</Text>
+    <View style={styles.root}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.headerCaption}>Estava Real Estate</Text>
+            <Text style={styles.headerTitle}>Welcome back, {user?.fullName || "User"}</Text>
           </View>
-          <View style={styles.headerRight}>
-            <Pressable
-              style={styles.notificationButton}
-              onPress={() => navigation.navigate("Notifications")}
-              accessibilityLabel="Notifications"
-              accessibilityRole="button"
-            >
-              <Text style={styles.notificationIcon}>🔔</Text>
+          <View style={styles.headerActions}>
+            <Pressable style={styles.iconButton} onPress={() => navigation.navigate("Notifications")}>
+              <Text style={styles.iconButtonText}>N</Text>
             </Pressable>
-            <Pressable
-              style={styles.profileButton}
-              onPress={() => navigation.navigate("Profile")}
-              accessibilityLabel="Open profile"
-              accessibilityRole="button"
-              hitSlop={8}
-            >
+            <Pressable style={styles.avatarButton} onPress={() => navigation.navigate("Profile")}>
               {user?.profileImage ? (
-                <Image source={{ uri: user.profileImage }} style={styles.profileImage} />
+                <Image source={{ uri: user.profileImage }} style={styles.avatarImage} />
               ) : (
-                <View style={styles.profileFallback}>
-                  <Text style={styles.profileFallbackText}>{profileInitial}</Text>
-                </View>
+                <Text style={styles.avatarText}>{getNameInitials(user?.fullName)}</Text>
               )}
             </Pressable>
           </View>
         </View>
-      </View>
 
-      {/* Featured Properties Section */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
+        {!!error && <Text style={styles.errorText}>{error}</Text>}
+
+        <View style={styles.sectionHead}>
           <Text style={styles.sectionTitle}>Featured Properties</Text>
           <Pressable onPress={() => navigation.navigate("PropertyList")}>
-            <Text style={styles.seeAllLink}>See all →</Text>
+            <Text style={styles.sectionLink}>See all</Text>
           </Pressable>
         </View>
-        <FlatList
-          data={featuredProperties}
-          horizontal
-          scrollEnabled={false}
-          renderItem={({ item }) => <PropertyCard property={item} isSmall />}
-          keyExtractor={(item) => item._id}
-          contentContainerStyle={styles.horizontalList}
-          showsHorizontalScrollIndicator={false}
-        />
-      </View>
 
-      {/* Quick Menu Grid */}
-      <View style={styles.section}>
+        {loading ? (
+          <View style={styles.loadingBlock}><ActivityIndicator color={estavaCore.colors.accent} /></View>
+        ) : (
+          <FlatList
+            data={featuredProperties}
+            horizontal
+            keyExtractor={(item) => item._id}
+            renderItem={({ item }) => renderPropertyCard(item, true)}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalList}
+          />
+        )}
+
         <View style={styles.menuGrid}>
-          {menuItems.map((item) => (
-            <Pressable
-              key={item.screen}
-              style={styles.menuItem}
-              onPress={() => navigation.navigate(item.screen)}
-              accessibilityRole="button"
-              accessibilityLabel={item.label}
-            >
-              <Text style={styles.menuIcon}>{item.icon}</Text>
-              <Text style={styles.menuItemLabel}>{item.label}</Text>
+          {fallbackMenu.map((menu) => (
+            <Pressable key={menu.route} style={styles.menuItem} onPress={() => navigation.navigate(menu.route)}>
+              <Text style={styles.menuItemText}>{menu.label}</Text>
             </Pressable>
           ))}
         </View>
-      </View>
 
-      {/* Recommended For You Section */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
+        <View style={styles.sectionHead}>
           <Text style={styles.sectionTitle}>Recommended For You</Text>
           <Pressable onPress={() => navigation.navigate("PropertyList")}>
-            <Text style={styles.seeAllLink}>See all →</Text>
+            <Text style={styles.sectionLink}>See all</Text>
           </Pressable>
         </View>
-        <FlatList
-          data={recommendedProperties}
-          scrollEnabled={false}
-          renderItem={({ item }) => <PropertyCard property={item} />}
-          keyExtractor={(item) => item._id}
-        />
-      </View>
 
-      <Pressable
-        style={styles.logoutButton}
-        onPress={logout}
-        accessibilityRole="button"
-        accessibilityLabel="Logout"
-      >
-        <Text style={styles.logoutText}>Logout</Text>
-      </Pressable>
-    </ScrollView>
+        {recommendedProperties.length === 0 ? (
+          <View style={styles.emptyBlock}>
+            <Text style={styles.emptyText}>Open a few property details and we will suggest based on your visits.</Text>
+          </View>
+        ) : (
+          <View style={styles.stackList}>{recommendedProperties.map((item) => renderPropertyCard(item, false))}</View>
+        )}
+
+        <Pressable style={styles.logoutButton} onPress={logout}>
+          <Text style={styles.logoutButtonText}>Sign out</Text>
+        </Pressable>
+      </ScrollView>
+
+      <View style={styles.footer}>
+        {footerLinks.map((link) => (
+          <Pressable
+            key={link.route}
+            style={[styles.footerItem, link.route === "Home" && styles.footerItemActive]}
+            onPress={() => navigation.navigate(link.route)}
+          >
+            <Text style={[styles.footerItemText, link.route === "Home" && styles.footerItemTextActive]}>{link.label}</Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: estavaCore.colors.background
+  },
   container: {
     flex: 1,
-    backgroundColor: "#f7f9fb", // Design system surface color
-    paddingVertical: 12
+    backgroundColor: estavaCore.colors.background
   },
-  
-  // Header styles
+  content: {
+    paddingHorizontal: estavaCore.spacing.lg,
+    paddingVertical: estavaCore.spacing.lg,
+    paddingBottom: 96
+  },
   header: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: "#ffffff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e3e5"
-  },
-  headerContent: {
+    marginBottom: estavaCore.spacing.lg,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center"
   },
-  headerLeft: {
-    flex: 1
+  headerCaption: {
+    color: estavaCore.colors.textSecondary,
+    fontSize: 12,
+    fontWeight: "600"
   },
-  headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12
-  },
-  greeting: {
-    fontSize: 14,
-    color: "#45464d", // on-surface-variant
-    fontWeight: "500"
-  },
-  userName: {
+  headerTitle: {
+    marginTop: 4,
     fontSize: 20,
     fontWeight: "700",
-    color: "#000000", // primary
-    marginTop: 4
+    color: estavaCore.colors.primary,
+    maxWidth: 230
   },
-  
-  // Notification button
-  notificationButton: {
+  headerActions: {
+    flexDirection: "row",
+    gap: estavaCore.spacing.sm
+  },
+  iconButton: {
     width: 40,
     height: 40,
-    borderRadius: 8,
-    backgroundColor: "#eceef0", // surface-container
-    alignItems: "center",
-    justifyContent: "center",
+    borderRadius: estavaCore.radius.sm,
     borderWidth: 1,
-    borderColor: "#e0e3e5"
-  },
-  notificationIcon: {
-    fontSize: 20
-  },
-  
-  // Profile button
-  profileButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    overflow: "hidden",
-    backgroundColor: "#f2f4f6",
-    borderWidth: 1,
-    borderColor: "#c6c6cd", // outline-variant
+    borderColor: estavaCore.colors.border,
+    backgroundColor: estavaCore.colors.surface,
     alignItems: "center",
     justifyContent: "center"
   },
-  profileImage: {
+  iconButtonText: {
+    color: estavaCore.colors.primary,
+    fontWeight: "700"
+  },
+  avatarButton: {
+    width: 40,
+    height: 40,
+    borderRadius: estavaCore.radius.full,
+    backgroundColor: estavaCore.colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden"
+  },
+  avatarImage: {
     width: "100%",
     height: "100%"
   },
-  profileFallback: {
-    width: "100%",
-    height: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#000000"
+  avatarText: {
+    color: estavaCore.colors.surface,
+    fontWeight: "700"
   },
-  profileFallbackText: {
-    color: "#ffffff",
-    fontWeight: "700",
-    fontSize: 16
-  },
-  
-  // Sections
-  section: {
-    marginTop: 24,
-    paddingHorizontal: 16
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#000000"
-  },
-  seeAllLink: {
-    fontSize: 14,
-    color: "#059669", // secondary accent
+  errorText: {
+    marginBottom: estavaCore.spacing.md,
+    color: estavaCore.colors.danger,
     fontWeight: "600"
   },
-  
-  // Property cards
-  propertyCard: {
-    marginBottom: 12,
-    borderRadius: 8,
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "#e0e3e5",
-    overflow: "hidden",
-    shadowColor: "#000000",
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1
+  sectionHead: {
+    marginTop: estavaCore.spacing.md,
+    marginBottom: estavaCore.spacing.sm,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center"
   },
-  propertyCardSmall: {
-    width: 160,
-    marginRight: 12,
-    marginBottom: 0
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: estavaCore.colors.primary
+  },
+  sectionLink: {
+    color: estavaCore.colors.accent,
+    fontWeight: "700"
+  },
+  loadingBlock: {
+    backgroundColor: estavaCore.colors.surface,
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
+    borderRadius: estavaCore.radius.md,
+    minHeight: 120,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  horizontalList: {
+    paddingRight: 4,
+    gap: estavaCore.spacing.md
+  },
+  propertyCard: {
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
+    backgroundColor: estavaCore.colors.surface,
+    borderRadius: estavaCore.radius.md,
+    overflow: "hidden"
+  },
+  propertyCardCompact: {
+    width: 220
   },
   propertyImage: {
     width: "100%",
-    height: 120
+    height: 132,
+    backgroundColor: estavaCore.colors.surfaceMuted
   },
-  propertyImageSmall: {
-    height: 100
+  imagePlaceholder: {
+    width: "100%",
+    height: 132,
+    backgroundColor: estavaCore.colors.surfaceMuted,
+    alignItems: "center",
+    justifyContent: "center"
   },
-  propertyInfo: {
-    padding: 12
+  imagePlaceholderText: {
+    color: estavaCore.colors.textSecondary,
+    fontWeight: "600"
   },
-  propertyInfoSmall: {
-    padding: 8
+  propertyContent: {
+    padding: estavaCore.spacing.md
   },
   propertyTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#000000"
+    color: estavaCore.colors.textPrimary,
+    fontSize: 15,
+    fontWeight: "700"
   },
-  propertyLocation: {
-    fontSize: 12,
-    color: "#45464d",
-    marginTop: 4
+  propertyMeta: {
+    marginTop: 4,
+    color: estavaCore.colors.textSecondary
   },
   propertyPrice: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#059669",
-    marginTop: 8
+    marginTop: 8,
+    color: estavaCore.colors.accent,
+    fontWeight: "700"
   },
-  
-  // Horizontal list container
-  horizontalList: {
-    paddingRight: 16
-  },
-  
-  // Menu grid
   menuGrid: {
+    marginTop: estavaCore.spacing.xl,
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
-    justifyContent: "space-between"
+    gap: estavaCore.spacing.sm
   },
   menuItem: {
-    width: "30%",
-    paddingVertical: 16,
-    paddingHorizontal: 8,
-    backgroundColor: "#ffffff",
-    borderRadius: 8,
+    width: "31%",
+    minHeight: 52,
+    borderRadius: estavaCore.radius.sm,
     borderWidth: 1,
-    borderColor: "#e0e3e5",
+    borderColor: estavaCore.colors.border,
+    backgroundColor: estavaCore.colors.surface,
     alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000000",
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1
+    justifyContent: "center"
   },
-  menuIcon: {
-    fontSize: 24,
-    marginBottom: 8
-  },
-  menuItemLabel: {
-    fontSize: 11,
+  menuItemText: {
+    color: estavaCore.colors.textPrimary,
     fontWeight: "600",
-    color: "#191c1e",
+    fontSize: 12,
     textAlign: "center"
   },
-  
-  // Logout button
-  logoutButton: {
-    marginHorizontal: 16,
-    marginTop: 24,
-    marginBottom: 24,
-    backgroundColor: "#ba1a1a", // error color
-    borderRadius: 8,
-    minHeight: 44,
-    paddingVertical: 12,
-    alignItems: "center"
+  stackList: {
+    gap: estavaCore.spacing.md
   },
-  logoutText: {
-    color: "#ffffff",
-    fontWeight: "700",
-    fontSize: 16
+  emptyBlock: {
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
+    borderRadius: estavaCore.radius.md,
+    backgroundColor: estavaCore.colors.surface,
+    padding: estavaCore.spacing.lg
+  },
+  emptyText: {
+    color: estavaCore.colors.textSecondary,
+    lineHeight: 20
+  },
+  logoutButton: {
+    marginTop: estavaCore.spacing.xl,
+    minHeight: 48,
+    borderRadius: estavaCore.radius.sm,
+    borderWidth: 1,
+    borderColor: estavaCore.colors.danger,
+    backgroundColor: estavaCore.colors.dangerSoft,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  logoutButtonText: {
+    color: estavaCore.colors.danger,
+    fontWeight: "700"
+  },
+  footer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 68,
+    flexDirection: "row",
+    borderTopWidth: 1,
+    borderTopColor: estavaCore.colors.border,
+    backgroundColor: estavaCore.colors.surface
+  },
+  footerItem: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  footerItemActive: {
+    backgroundColor: estavaCore.colors.accentSoft
+  },
+  footerItemText: {
+    color: estavaCore.colors.textSecondary,
+    fontWeight: "600",
+    fontSize: 12
+  },
+  footerItemTextActive: {
+    color: estavaCore.colors.accent,
+    fontWeight: "700"
   }
 });

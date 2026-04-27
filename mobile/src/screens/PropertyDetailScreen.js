@@ -20,6 +20,8 @@ import { inquiryApi } from "../api/inquiryApi";
 import { appointmentApi } from "../api/appointmentApi";
 import { reviewApi } from "../api/reviewApi";
 import { useAuth } from "../context/AuthContext";
+import { estavaCore } from "../theme/estavaCore";
+import { pushRecentlyViewedProperty } from "../utils/recentlyViewedProperties";
 
 export default function PropertyDetailScreen({ route, navigation }) {
   const { propertyId } = route.params;
@@ -134,6 +136,7 @@ export default function PropertyDetailScreen({ route, navigation }) {
         setError("");
         const result = await getPropertyById(propertyId);
         setProperty(result);
+        pushRecentlyViewedProperty(currentUserId, result?._id || propertyId);
         await syncFavoriteState(result?._id || propertyId);
         shouldLoadReviews = true;
       } catch (fetchError) {
@@ -372,17 +375,14 @@ export default function PropertyDetailScreen({ route, navigation }) {
           onPress={isFavorite ? handleRemoveFavorite : handleAddFavorite}
           disabled={favoriteActionLoading}
         >
-          <Text style={styles.actionButtonEmoji}>❤️</Text>
           <Text style={styles.actionButtonLabel}>{isFavorite ? "Favorited" : "Favorite"}</Text>
         </Pressable>
 
         <Pressable style={styles.actionButton} onPress={openInquiryModal}>
-          <Text style={styles.actionButtonEmoji}>💬</Text>
           <Text style={styles.actionButtonLabel}>Inquiry</Text>
         </Pressable>
 
         <Pressable style={styles.actionButton} onPress={() => setAppointmentModalVisible(true)}>
-          <Text style={styles.actionButtonEmoji}>📅</Text>
           <Text style={styles.actionButtonLabel}>Appointment</Text>
         </Pressable>
       </View>
@@ -592,7 +592,7 @@ export default function PropertyDetailScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f7fa"
+    backgroundColor: estavaCore.colors.background
   },
   content: {
     padding: 16
@@ -601,27 +601,27 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f5f7fa",
+    backgroundColor: estavaCore.colors.background,
     padding: 16
   },
   title: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#111827"
+    color: estavaCore.colors.primary
   },
   location: {
     marginTop: 8,
-    color: "#4b5563"
+    color: estavaCore.colors.textSecondary
   },
   price: {
     marginTop: 8,
     fontSize: 20,
     fontWeight: "800",
-    color: "#1d4ed8"
+    color: estavaCore.colors.accent
   },
   status: {
     marginTop: 8,
-    color: "#4b5563"
+    color: estavaCore.colors.textSecondary
   },
   ownerHint: {
     color: "#6b7280",
@@ -634,13 +634,13 @@ const styles = StyleSheet.create({
     marginBottom: 12
   },
   statusChip: {
-    backgroundColor: "#e5e7eb",
+    backgroundColor: estavaCore.colors.surfaceMuted,
     borderRadius: 16,
     paddingVertical: 7,
     paddingHorizontal: 12
   },
   statusChipActive: {
-    backgroundColor: "#1d4ed8"
+    backgroundColor: estavaCore.colors.primary
   },
   statusChipText: {
     color: "#374151",
@@ -650,8 +650,8 @@ const styles = StyleSheet.create({
     color: "#ffffff"
   },
   editListingButton: {
-    backgroundColor: "#dbeafe",
-    borderColor: "#1d4ed8",
+    backgroundColor: estavaCore.colors.accentSoft,
+    borderColor: estavaCore.colors.accent,
     borderWidth: 1,
     borderRadius: 8,
     paddingVertical: 10,
@@ -659,7 +659,7 @@ const styles = StyleSheet.create({
     marginBottom: 6
   },
   editListingText: {
-    color: "#1d4ed8",
+    color: estavaCore.colors.accent,
     fontWeight: "700"
   },
   addPhotosButton: {
@@ -687,9 +687,9 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: estavaCore.colors.surface,
     borderWidth: 1,
-    borderColor: "#d1d5db",
+    borderColor: estavaCore.colors.border,
     borderRadius: 8,
     minHeight: 44,
     paddingVertical: 12,
@@ -698,17 +698,13 @@ const styles = StyleSheet.create({
     justifyContent: "center"
   },
   actionButtonActive: {
-    backgroundColor: "#dbeafe",
-    borderColor: "#1d4ed8"
-  },
-  actionButtonEmoji: {
-    fontSize: 20,
-    marginBottom: 4
+    backgroundColor: estavaCore.colors.accentSoft,
+    borderColor: estavaCore.colors.accent
   },
   actionButtonLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "600",
-    color: "#374151"
+    color: estavaCore.colors.textPrimary
   },
   imageRow: {
     marginTop: 16
@@ -721,10 +717,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#d1d5db"
   },
   amenitiesGrid: {
-    backgroundColor: "#ffffff",
+    backgroundColor: estavaCore.colors.surface,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: estavaCore.colors.border,
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginBottom: 6
@@ -744,10 +740,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     fontSize: 16,
     fontWeight: "700",
-    color: "#111827"
+    color: estavaCore.colors.primary
   },
   body: {
-    color: "#374151",
+    color: estavaCore.colors.textSecondary,
     lineHeight: 22
   },
   reviewSummary: {
@@ -757,7 +753,7 @@ const styles = StyleSheet.create({
   },
   reviewShortcutButton: {
     alignSelf: "flex-start",
-    backgroundColor: "#1d4ed8",
+    backgroundColor: estavaCore.colors.primary,
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 12,
@@ -768,15 +764,15 @@ const styles = StyleSheet.create({
     fontWeight: "700"
   },
   reviewCard: {
-    backgroundColor: "#ffffff",
+    backgroundColor: estavaCore.colors.surface,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: estavaCore.colors.border,
     borderRadius: 10,
     padding: 12,
     marginBottom: 10
   },
   reviewAuthor: {
-    color: "#111827",
+    color: estavaCore.colors.textPrimary,
     fontWeight: "700"
   },
   reviewStars: {
@@ -789,7 +785,7 @@ const styles = StyleSheet.create({
     color: "#374151"
   },
   error: {
-    color: "#b91c1c",
+    color: estavaCore.colors.danger,
     textAlign: "center"
   },
   modalOverlay: {
@@ -798,7 +794,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.3)"
   },
   modalContent: {
-    backgroundColor: "#fff",
+    backgroundColor: estavaCore.colors.surface,
     padding: 16,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16
@@ -810,7 +806,7 @@ const styles = StyleSheet.create({
   },
   modalInput: {
     borderWidth: 1,
-    borderColor: "#d1d5db",
+    borderColor: estavaCore.colors.border,
     borderRadius: 8,
     padding: 10,
     marginBottom: 12,
@@ -841,7 +837,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
-    backgroundColor: "#1d4ed8"
+    backgroundColor: estavaCore.colors.primary
   },
   submitText: {
     color: "#fff",
@@ -849,7 +845,7 @@ const styles = StyleSheet.create({
   },
   pickerButton: {
     borderWidth: 1,
-    borderColor: "#d1d5db",
+    borderColor: estavaCore.colors.border,
     borderRadius: 8,
     minHeight: 44,
     padding: 10,

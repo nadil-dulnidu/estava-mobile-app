@@ -16,6 +16,7 @@ import NotificationsScreen from "../screens/NotificationsScreen";
 import CreatePropertyScreen from "../screens/CreatePropertyScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import { useAuth } from "../context/AuthContext";
+import { estavaCore } from "../theme/estavaCore";
 
 const Stack = createNativeStackNavigator();
 
@@ -23,7 +24,21 @@ export default function AppNavigator() {
   const { isAuthenticated } = useAuth();
 
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: estavaCore.colors.surface
+        },
+        headerShadowVisible: false,
+        headerTintColor: estavaCore.colors.primary,
+        headerTitleStyle: {
+          fontWeight: "700"
+        },
+        contentStyle: {
+          backgroundColor: estavaCore.colors.background
+        }
+      }}
+    >
       {isAuthenticated ? (
         <>
           <Stack.Screen name="Home" component={HomeScreen} options={{ title: "Dashboard" }} />

@@ -14,6 +14,7 @@ import {
 import { inquiryApi } from "../api/inquiryApi";
 import { useAuth } from "../context/AuthContext";
 import { isTenDigitPhoneNumber, normalizePhoneNumber } from "../utils/phoneNumber";
+import { estavaCore } from "../theme/estavaCore";
 
 const getApiErrorMessage = (error, fallbackMessage) => {
   return error?.response?.data?.message || error?.message || fallbackMessage;
@@ -41,9 +42,9 @@ const getInquiryStatus = (inquiry) => {
 };
 
 const getStatusColor = (status) => {
-  if (status === "replied") return "#059669";
-  if (status === "closed") return "#6b7280";
-  return "#d97706";
+  if (status === "replied") return estavaCore.colors.accent;
+  if (status === "closed") return estavaCore.colors.textSecondary;
+  return "#a16207";
 };
 
 const toStatusLabel = (status) => {
@@ -498,45 +499,47 @@ export default function InquiriesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: "#f5f7fa" },
-  title: { fontSize: 24, fontWeight: "700", marginBottom: 16, color: "#1f2937" },
-  error: { color: "#b91c1c", marginBottom: 8 },
-  emptyText: { textAlign: "center", color: "#6b7280", marginTop: 20 },
+  container: { flex: 1, padding: 16, backgroundColor: estavaCore.colors.background },
+  title: { fontSize: 24, fontWeight: "700", marginBottom: 16, color: estavaCore.colors.primary },
+  error: { color: estavaCore.colors.danger, marginBottom: 8 },
+  emptyText: { textAlign: "center", color: estavaCore.colors.textSecondary, marginTop: 20 },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 8,
+    backgroundColor: estavaCore.colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
     padding: 12,
     marginBottom: 12
   },
-  subject: { fontSize: 16, fontWeight: "600" },
-  property: { fontSize: 12, color: "#6b7280", marginBottom: 4 },
-  message: { fontSize: 14, color: "#374151", marginTop: 6 },
-  contact: { fontSize: 12, color: "#6b7280", marginTop: 4 },
+  subject: { fontSize: 16, fontWeight: "600", color: estavaCore.colors.textPrimary },
+  property: { fontSize: 12, color: estavaCore.colors.textSecondary, marginBottom: 4 },
+  message: { fontSize: 14, color: estavaCore.colors.textPrimary, marginTop: 6 },
+  contact: { fontSize: 12, color: estavaCore.colors.textSecondary, marginTop: 4 },
   status: { fontSize: 12, fontWeight: "600", marginTop: 4 },
   tabsRow: { flexDirection: "row", gap: 10, marginBottom: 12 },
   tabButton: {
     flex: 1,
-    backgroundColor: "#e5e7eb",
+    backgroundColor: estavaCore.colors.surfaceMuted,
     borderRadius: 8,
     minHeight: 44,
     paddingVertical: 10,
     alignItems: "center",
     justifyContent: "center"
   },
-  tabButtonActive: { backgroundColor: "#1d4ed8" },
-  tabText: { fontWeight: "600", color: "#374151" },
-  tabTextActive: { color: "#fff" },
+  tabButtonActive: { backgroundColor: estavaCore.colors.primary },
+  tabText: { fontWeight: "600", color: estavaCore.colors.textSecondary },
+  tabTextActive: { color: estavaCore.colors.surface },
   responseBox: {
     marginTop: 8,
     padding: 8,
     borderRadius: 8,
-    backgroundColor: "#eff6ff",
+    backgroundColor: estavaCore.colors.accentSoft,
     borderWidth: 1,
-    borderColor: "#bfdbfe"
+    borderColor: estavaCore.colors.border
   },
-  responseLabel: { fontSize: 12, fontWeight: "700", color: "#1e40af" },
-  responseText: { marginTop: 4, color: "#1f2937" },
-  responseDate: { marginTop: 4, fontSize: 12, color: "#4b5563" },
+  responseLabel: { fontSize: 12, fontWeight: "700", color: estavaCore.colors.accent },
+  responseText: { marginTop: 4, color: estavaCore.colors.textPrimary },
+  responseDate: { marginTop: 4, fontSize: 12, color: estavaCore.colors.textSecondary },
   actionsRow: {
     marginTop: 8,
     flexDirection: "row",
@@ -544,7 +547,7 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   actionPrimary: {
-    backgroundColor: "#1d4ed8",
+    backgroundColor: estavaCore.colors.primary,
     borderRadius: 8,
     minHeight: 44,
     paddingVertical: 10,
@@ -555,7 +558,7 @@ const styles = StyleSheet.create({
   },
   actionPrimaryText: { color: "#fff", fontWeight: "700", fontSize: 12 },
   actionSecondary: {
-    backgroundColor: "#e5e7eb",
+    backgroundColor: estavaCore.colors.surfaceMuted,
     borderRadius: 8,
     minHeight: 44,
     paddingVertical: 10,
@@ -564,9 +567,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     justifyContent: "center"
   },
-  actionSecondaryText: { color: "#374151", fontWeight: "700", fontSize: 12 },
+  actionSecondaryText: { color: estavaCore.colors.textPrimary, fontWeight: "700", fontSize: 12 },
   actionDanger: {
-    backgroundColor: "#fee2e2",
+    backgroundColor: estavaCore.colors.dangerSoft,
     borderRadius: 8,
     minHeight: 44,
     paddingVertical: 10,
@@ -575,11 +578,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     justifyContent: "center"
   },
-  actionDangerText: { color: "#b91c1c", fontWeight: "700", fontSize: 12 },
-  actionHint: { color: "#6b7280", fontSize: 12, marginTop: 2 },
+  actionDangerText: { color: estavaCore.colors.danger, fontWeight: "700", fontSize: 12 },
+  actionHint: { color: estavaCore.colors.textSecondary, fontSize: 12, marginTop: 2 },
   modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.3)" },
   modalContent: {
-    backgroundColor: "#fff",
+    backgroundColor: estavaCore.colors.surface,
     padding: 16,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16
@@ -587,7 +590,7 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12 },
   modalInput: {
     borderWidth: 1,
-    borderColor: "#d1d5db",
+    borderColor: estavaCore.colors.border,
     borderRadius: 8,
     padding: 10,
     marginBottom: 12
@@ -602,22 +605,22 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
-    backgroundColor: "#e5e7eb"
+    backgroundColor: estavaCore.colors.surfaceMuted
   },
-  cancelText: { color: "#374151", fontWeight: "600" },
+  cancelText: { color: estavaCore.colors.textPrimary, fontWeight: "600" },
   submitBtn: {
     minHeight: 44,
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
-    backgroundColor: "#1d4ed8"
+    backgroundColor: estavaCore.colors.primary
   },
   submitBtnDisabled: {
     opacity: 0.5
   },
   submitText: { color: "#fff", fontWeight: "600" },
   modalError: {
-    color: "#b91c1c",
+    color: estavaCore.colors.danger,
     marginTop: -4,
     marginBottom: 10,
     fontWeight: "600"

@@ -14,6 +14,7 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../context/AuthContext";
 import { isTenDigitPhoneNumber, normalizePhoneNumber } from "../utils/phoneNumber";
+import { estavaCore } from "../theme/estavaCore";
 
 const getInitials = (name) => {
   const parts = String(name || "")
@@ -325,7 +326,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f7fa"
+    backgroundColor: estavaCore.colors.background
   },
   content: {
     padding: 16,
@@ -334,23 +335,25 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#111827"
+    color: estavaCore.colors.primary
   },
   subtitle: {
     marginTop: 6,
     marginBottom: 14,
-    color: "#4b5563"
+    color: estavaCore.colors.textSecondary
   },
   card: {
-    backgroundColor: "#ffffff",
+    backgroundColor: estavaCore.colors.surface,
     borderRadius: 12,
     padding: 14,
-    marginBottom: 12
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#111827",
+    color: estavaCore.colors.primary,
     marginBottom: 10
   },
   avatarRow: {
@@ -367,7 +370,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "#1d4ed8",
+    backgroundColor: estavaCore.colors.primary,
     alignItems: "center",
     justifyContent: "center"
   },
@@ -384,21 +387,21 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#374151",
+    color: estavaCore.colors.textSecondary,
     marginBottom: 6
   },
   input: {
     borderWidth: 1,
-    borderColor: "#d1d5db",
+    borderColor: estavaCore.colors.border,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 10,
-    backgroundColor: "#ffffff",
+    backgroundColor: estavaCore.colors.surface,
     marginBottom: 12,
-    color: "#111827"
+    color: estavaCore.colors.textPrimary
   },
   primaryButton: {
-    backgroundColor: "#1d4ed8",
+    backgroundColor: estavaCore.colors.primary,
     borderRadius: 8,
     minHeight: 42,
     alignItems: "center",
@@ -411,8 +414,8 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     borderWidth: 1,
-    borderColor: "#1d4ed8",
-    backgroundColor: "#eff6ff",
+    borderColor: estavaCore.colors.accent,
+    backgroundColor: estavaCore.colors.accentSoft,
     borderRadius: 8,
     minHeight: 42,
     alignItems: "center",
@@ -420,7 +423,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14
   },
   secondaryButtonText: {
-    color: "#1d4ed8",
+    color: estavaCore.colors.accent,
     fontWeight: "700"
   },
   buttonDisabled: {
@@ -428,12 +431,12 @@ const styles = StyleSheet.create({
   },
   error: {
     marginBottom: 10,
-    color: "#b91c1c",
+    color: estavaCore.colors.danger,
     fontWeight: "600"
   },
   success: {
     marginBottom: 10,
-    color: "#047857",
+    color: estavaCore.colors.accent,
     fontWeight: "600"
   }
 });
