@@ -1,19 +1,54 @@
-// Screen component for user-facing workflow in the real-estate mobile app.
-import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  ScrollView,
-  Image,
-  Pressable,
-  Modal,
-  TextInput,
-  Alert,
-  Platform
-} from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
+  amenitiesGrid: {
+    backgroundColor: "#ffffff",
+    borderRadius: 8,
+    container: {
+      flex: 1,
+      backgroundColor: "#f7f9fb"
+    },
+    centered: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: "#f7f9fb"
+    },
+    content: {
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+      paddingBottom: 32
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: "800",
+      color: "#000000"
+    },
+    location: {
+      marginTop: 8,
+      fontSize: 14,
+      color: "#45464d"
+    },
+    price: {
+      marginTop: 8,
+      fontSize: 20,
+      fontWeight: "800",
+      color: "#059669"
+    },
+    status: {
+      marginTop: 8,
+      fontSize: 14,
+      color: "#45464d"
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      marginTop: 20,
+      marginBottom: 12,
+      color: "#000000"
+    },
+    body: {
+      fontSize: 14,
+      color: "#191c1e",
+      lineHeight: 20
+    },
 import { getPropertyById, updateProperty } from "../api/propertyApi";
 import { favoriteApi } from "../api/favoriteApi";
 import { inquiryApi } from "../api/inquiryApi";
@@ -406,8 +441,14 @@ export default function PropertyDetailScreen({ route, navigation }) {
 
       {Array.isArray(property.features) && property.features.length > 0 ? (
         <>
-          <Text style={styles.sectionTitle}>Features</Text>
-          <Text style={styles.body}>{property.features.join(", ")}</Text>
+          <Text style={styles.sectionTitle}>Amenities</Text>
+          <View style={styles.amenitiesGrid}>
+            {property.features.map((feature, index) => (
+              <View key={index} style={styles.amenityItem}>
+                <Text style={styles.amenityText}>✓ {feature}</Text>
+              </View>
+            ))}
+          </View>
         </>
       ) : null}
 
