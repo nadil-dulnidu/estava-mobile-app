@@ -2,6 +2,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, RefreshControl } from "react-native";
 import { getMyProperties } from "../api/propertyApi";
+import { estavaCore } from "../theme/estavaCore";
 
 const resolveOwnerId = (entity) => {
   if (!entity) return "";
@@ -41,7 +42,7 @@ export default function MyPropertiesScreen({ navigation }) {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#1d4ed8" />
+        <ActivityIndicator size="large" color={estavaCore.colors.accent} />
       </View>
     );
   }
@@ -99,30 +100,31 @@ export default function MyPropertiesScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f7fa" },
-  centered: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#f5f7fa" },
-  error: { marginHorizontal: 16, marginTop: 16, color: "#b91c1c" },
+  container: { flex: 1, backgroundColor: estavaCore.colors.background },
+  centered: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: estavaCore.colors.background },
+  error: { marginHorizontal: 16, marginTop: 16, color: estavaCore.colors.danger },
   headerRow: {
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 4
   },
-  subtitle: { color: "#6b7280", marginBottom: 10 },
+  subtitle: { color: estavaCore.colors.textSecondary, marginBottom: 10 },
   backButton: {
     alignSelf: "flex-start",
-    backgroundColor: "#e5e7eb",
+    backgroundColor: estavaCore.colors.surfaceMuted,
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 14
   },
-  backButtonText: { color: "#374151", fontWeight: "700" },
+  backButtonText: { color: estavaCore.colors.textPrimary, fontWeight: "700" },
   listContent: { padding: 16, gap: 12 },
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: estavaCore.colors.surface,
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#e5e7eb"
+    borderColor: estavaCore.colors.border,
+    ...estavaCore.shadow.card
   },
   cardHeader: {
     flexDirection: "row",
@@ -130,12 +132,12 @@ const styles = StyleSheet.create({
     alignItems: "flex-start"
   },
   cardTitleBlock: { flex: 1, paddingRight: 10 },
-  title: { fontSize: 16, fontWeight: "700", color: "#111827" },
-  meta: { marginTop: 4, color: "#4b5563" },
-  price: { marginTop: 8, fontSize: 16, fontWeight: "700", color: "#1d4ed8" },
+  title: { fontSize: 16, fontWeight: "700", color: estavaCore.colors.textPrimary },
+  meta: { marginTop: 4, color: estavaCore.colors.textSecondary },
+  price: { marginTop: 8, fontSize: 16, fontWeight: "700", color: estavaCore.colors.accent },
   ownerBadge: {
-    backgroundColor: "#dbeafe",
-    color: "#1d4ed8",
+    backgroundColor: estavaCore.colors.accentSoft,
+    color: estavaCore.colors.accent,
     fontWeight: "700",
     borderRadius: 999,
     paddingHorizontal: 10,
@@ -144,12 +146,12 @@ const styles = StyleSheet.create({
   },
   actionsRow: { marginTop: 12, flexDirection: "row", gap: 10 },
   editButton: {
-    backgroundColor: "#1d4ed8",
+    backgroundColor: estavaCore.colors.primary,
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 14,
     alignItems: "center"
   },
   editButtonText: { color: "#fff", fontWeight: "700" },
-  empty: { textAlign: "center", marginTop: 24, color: "#6b7280" }
+  empty: { textAlign: "center", marginTop: 24, color: estavaCore.colors.textSecondary }
 });

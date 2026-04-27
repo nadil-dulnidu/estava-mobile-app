@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { reviewApi } from "../api/reviewApi";
 import { getProperties } from "../api/propertyApi";
+import { estavaCore } from "../theme/estavaCore";
 
 export default function ReviewsScreen({ route, navigation }) {
   const [reviews, setReviews] = useState([]);
@@ -168,11 +169,12 @@ export default function ReviewsScreen({ route, navigation }) {
     ]);
   };
 
-  if (loading) return <ActivityIndicator style={{ marginTop: 20 }} size="large" />;
+  if (loading) return <ActivityIndicator style={{ marginTop: 20 }} size="large" color={estavaCore.colors.accent} />;
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>My Reviews</Text>
+      <Text style={styles.subtitle}>Write, edit, and manage property reviews.</Text>
       {!!error && <Text style={styles.error}>{error}</Text>}
       <Pressable
         style={styles.addButton}
@@ -356,12 +358,13 @@ export default function ReviewsScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: "#f5f7fa" },
-  title: { fontSize: 24, fontWeight: "700", marginBottom: 16, color: "#1f2937" },
-  error: { color: "#b91c1c", marginBottom: 8 },
-  emptyText: { textAlign: "center", color: "#6b7280", marginTop: 20 },
+  container: { flex: 1, padding: 16, backgroundColor: estavaCore.colors.background },
+  title: { fontSize: 24, fontWeight: "700", marginBottom: 4, color: estavaCore.colors.primary },
+  subtitle: { color: estavaCore.colors.textSecondary, marginBottom: 14 },
+  error: { color: estavaCore.colors.danger, marginBottom: 8 },
+  emptyText: { textAlign: "center", color: estavaCore.colors.textSecondary, marginTop: 20 },
   addButton: {
-    backgroundColor: "#1d4ed8",
+    backgroundColor: estavaCore.colors.primary,
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 16,
@@ -369,37 +372,40 @@ const styles = StyleSheet.create({
   },
   addButtonText: { color: "#fff", fontWeight: "700", textAlign: "center" },
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: estavaCore.colors.surface,
     borderRadius: 8,
     padding: 12,
-    marginBottom: 12
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
+    ...estavaCore.shadow.card
   },
-  target: { fontSize: 16, fontWeight: "600" },
+  target: { fontSize: 16, fontWeight: "600", color: estavaCore.colors.textPrimary },
   stars: { fontSize: 16, marginTop: 6 },
-  comment: { fontSize: 14, color: "#374151", marginTop: 6 },
-  date: { fontSize: 12, color: "#9ca3af", marginTop: 6 },
+  comment: { fontSize: 14, color: estavaCore.colors.textSecondary, marginTop: 6 },
+  date: { fontSize: 12, color: estavaCore.colors.textSecondary, marginTop: 6 },
   cardActions: { marginTop: 8, flexDirection: "row", gap: 14 },
   editButton: { paddingVertical: 2, paddingHorizontal: 2 },
-  editButtonText: { color: "#1d4ed8", fontWeight: "700", fontSize: 12 },
+  editButtonText: { color: estavaCore.colors.accent, fontWeight: "700", fontSize: 12 },
   deleteButton: { paddingVertical: 2, paddingHorizontal: 2 },
-  deleteButtonText: { color: "#b91c1c", fontWeight: "700", fontSize: 12 },
+  deleteButtonText: { color: estavaCore.colors.danger, fontWeight: "700", fontSize: 12 },
   modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.3)" },
-  modalContent: { backgroundColor: "#fff", padding: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16, maxHeight: "85%" },
-  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12 },
-  propertyList: { height: 250, marginBottom: 12, borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 8 },
-  propertyItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: "#e5e7eb" },
-  propertyItemSelected: { backgroundColor: "#dbeafe", borderBottomColor: "#1d4ed8" },
-  propertyTitle: { fontSize: 14, fontWeight: "600" },
-  propertyPrice: { fontSize: 12, color: "#6b7280", marginTop: 4 },
+  modalContent: { backgroundColor: estavaCore.colors.surface, padding: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16, maxHeight: "85%" },
+  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12, color: estavaCore.colors.primary },
+  propertyList: { height: 250, marginBottom: 12, borderWidth: 1, borderColor: estavaCore.colors.border, borderRadius: 8 },
+  propertyItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: estavaCore.colors.border },
+  propertyItemSelected: { backgroundColor: estavaCore.colors.accentSoft, borderBottomColor: estavaCore.colors.accent },
+  propertyTitle: { fontSize: 14, fontWeight: "600", color: estavaCore.colors.textPrimary },
+  propertyPrice: { fontSize: 12, color: estavaCore.colors.textSecondary, marginTop: 4 },
   ratingContainer: { flexDirection: "row", justifyContent: "space-around", marginBottom: 12 },
   starButton: { padding: 8 },
   starSelected: { transform: [{ scale: 1.2 }] },
   starText: { fontSize: 24 },
-  modalInput: { borderWidth: 1, borderColor: "#d1d5db", borderRadius: 8, padding: 10, marginBottom: 12 },
+  modalInput: { borderWidth: 1, borderColor: estavaCore.colors.border, borderRadius: 8, padding: 10, marginBottom: 12, backgroundColor: estavaCore.colors.surface },
   modalButtons: { flexDirection: "row", justifyContent: "space-around" },
-  cancelBtn: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, backgroundColor: "#e5e7eb" },
-  cancelText: { color: "#374151", fontWeight: "600" },
-  submitBtn: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, backgroundColor: "#1d4ed8" },
+  cancelBtn: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, backgroundColor: estavaCore.colors.surfaceMuted },
+  cancelText: { color: estavaCore.colors.textPrimary, fontWeight: "600" },
+  submitBtn: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, backgroundColor: estavaCore.colors.primary },
   submitBtnDisabled: { opacity: 0.5 },
   submitText: { color: "#fff", fontWeight: "600" }
 });

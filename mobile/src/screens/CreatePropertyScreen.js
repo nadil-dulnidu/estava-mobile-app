@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { createProperty } from "../api/propertyApi";
+import { estavaCore } from "../theme/estavaCore";
 
 const MAX_FEATURES = 20;
 const MAX_FEATURE_LENGTH = 50;
@@ -189,6 +190,7 @@ export default function CreatePropertyScreen({ navigation }) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <Text style={styles.kicker}>Estava Real Estate</Text>
       <Text style={styles.title}>Post Property</Text>
       <Text style={styles.subtitle}>Create a listing so buyers can inquire and book visits.</Text>
 
@@ -322,15 +324,23 @@ export default function CreatePropertyScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f7fa" },
+  container: { flex: 1, backgroundColor: estavaCore.colors.background },
   content: { padding: 16 },
-  title: { fontSize: 24, fontWeight: "800", color: "#111827" },
-  subtitle: { marginTop: 6, marginBottom: 16, color: "#4b5563" },
-  error: { color: "#b91c1c", marginBottom: 8 },
+  kicker: {
+    color: estavaCore.colors.accent,
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+    marginBottom: 6
+  },
+  title: { fontSize: 24, fontWeight: "800", color: estavaCore.colors.primary },
+  subtitle: { marginTop: 6, marginBottom: 16, color: estavaCore.colors.textSecondary },
+  error: { color: estavaCore.colors.danger, marginBottom: 8 },
   input: {
-    backgroundColor: "#fff",
+    backgroundColor: estavaCore.colors.surface,
     borderWidth: 1,
-    borderColor: "#d1d5db",
+    borderColor: estavaCore.colors.border,
     borderRadius: 10,
     padding: 12,
     marginBottom: 12
@@ -341,16 +351,16 @@ const styles = StyleSheet.create({
   },
   label: {
     fontWeight: "700",
-    color: "#1f2937",
+    color: estavaCore.colors.textPrimary,
     marginBottom: 8
   },
   inputLabel: {
     fontWeight: "600",
-    color: "#374151",
+    color: estavaCore.colors.textSecondary,
     marginBottom: 6
   },
   helperText: {
-    color: "#6b7280",
+    color: estavaCore.colors.textSecondary,
     marginBottom: 8,
     fontSize: 12
   },
@@ -361,16 +371,16 @@ const styles = StyleSheet.create({
     marginBottom: 12
   },
   chip: {
-    backgroundColor: "#e5e7eb",
+    backgroundColor: estavaCore.colors.surfaceMuted,
     borderRadius: 20,
     paddingVertical: 8,
     paddingHorizontal: 12
   },
   chipActive: {
-    backgroundColor: "#1d4ed8"
+    backgroundColor: estavaCore.colors.primary
   },
   chipText: {
-    color: "#374151",
+    color: estavaCore.colors.textSecondary,
     fontWeight: "600"
   },
   chipTextActive: {
@@ -387,14 +397,14 @@ const styles = StyleSheet.create({
     marginBottom: 12
   },
   pickImageButton: {
-    backgroundColor: "#dbeafe",
+    backgroundColor: estavaCore.colors.accentSoft,
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: "center",
     marginBottom: 10
   },
   pickImageButtonText: {
-    color: "#1d4ed8",
+    color: estavaCore.colors.accent,
     fontWeight: "700"
   },
   imagePreviewRow: {
@@ -408,22 +418,22 @@ const styles = StyleSheet.create({
     width: 130,
     height: 88,
     borderRadius: 10,
-    backgroundColor: "#e5e7eb"
+    backgroundColor: estavaCore.colors.surfaceMuted
   },
   removeImageButton: {
     marginTop: 6,
-    backgroundColor: "#fee2e2",
+    backgroundColor: estavaCore.colors.dangerSoft,
     borderRadius: 8,
     paddingVertical: 6,
     alignItems: "center"
   },
   removeImageButtonText: {
-    color: "#b91c1c",
+    color: estavaCore.colors.danger,
     fontWeight: "600",
     fontSize: 12
   },
   submitButton: {
-    backgroundColor: "#1d4ed8",
+    backgroundColor: estavaCore.colors.primary,
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: "center",

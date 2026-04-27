@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { View, Text, FlatList, Pressable, StyleSheet, ActivityIndicator, TextInput } from "react-native";
 import { favoriteApi } from "../api/favoriteApi";
+import { estavaCore } from "../theme/estavaCore";
 
 const MAX_NOTE_LENGTH = 500;
 
@@ -127,7 +128,7 @@ export default function FavoritesScreen() {
     }
   };
 
-  if (loading) return <ActivityIndicator style={{ marginTop: 20 }} size="large" />;
+  if (loading) return <ActivityIndicator style={{ marginTop: 20 }} size="large" color={estavaCore.colors.accent} />;
 
   return (
     <View style={styles.container}>
@@ -221,32 +222,35 @@ export default function FavoritesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: "#f5f7fa" },
-  title: { fontSize: 24, fontWeight: "700", marginBottom: 16, color: "#1f2937" },
-  error: { color: "#b91c1c", marginBottom: 8 },
-  emptyText: { textAlign: "center", color: "#6b7280", marginTop: 20 },
+  container: { flex: 1, padding: 16, backgroundColor: estavaCore.colors.background },
+  title: { fontSize: 24, fontWeight: "700", marginBottom: 16, color: estavaCore.colors.primary },
+  error: { color: estavaCore.colors.danger, marginBottom: 8 },
+  emptyText: { textAlign: "center", color: estavaCore.colors.textSecondary, marginTop: 20 },
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: estavaCore.colors.surface,
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
     borderLeftWidth: 4,
-    borderLeftColor: "#1d4ed8"
+    borderLeftColor: estavaCore.colors.accent,
+    ...estavaCore.shadow.card
   },
-  propertyTitle: { fontSize: 16, fontWeight: "600" },
-  note: { fontSize: 12, color: "#6b7280", marginTop: 6 },
+  propertyTitle: { fontSize: 16, fontWeight: "600", color: estavaCore.colors.textPrimary },
+  note: { fontSize: 12, color: estavaCore.colors.textSecondary, marginTop: 6 },
   noteInput: {
     marginTop: 8,
     borderWidth: 1,
-    borderColor: "#d1d5db",
+    borderColor: estavaCore.colors.border,
     borderRadius: 8,
-    backgroundColor: "#fff",
+    backgroundColor: estavaCore.colors.surface,
     paddingHorizontal: 10,
     paddingVertical: 8,
     minHeight: 72,
     textAlignVertical: "top"
   },
-  noteCount: { marginTop: 6, fontSize: 11, color: "#6b7280", textAlign: "right" },
+  noteCount: { marginTop: 6, fontSize: 11, color: estavaCore.colors.textSecondary, textAlign: "right" },
   actionRow: {
     marginTop: 10,
     flexDirection: "row",
@@ -259,13 +263,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center"
   },
-  saveButton: { backgroundColor: "#1d4ed8" },
+  saveButton: { backgroundColor: estavaCore.colors.primary },
   saveText: { color: "#fff", fontWeight: "600" },
-  cancelButton: { backgroundColor: "#e5e7eb" },
-  cancelText: { color: "#374151", fontWeight: "600" },
-  editButton: { backgroundColor: "#dbeafe" },
-  editText: { color: "#1d4ed8", fontWeight: "600" },
-  removeButton: { backgroundColor: "#fee2e2" },
-  removeText: { color: "#b91c1c", fontWeight: "600" },
+  cancelButton: { backgroundColor: estavaCore.colors.surfaceMuted },
+  cancelText: { color: estavaCore.colors.textPrimary, fontWeight: "600" },
+  editButton: { backgroundColor: estavaCore.colors.accentSoft },
+  editText: { color: estavaCore.colors.accent, fontWeight: "600" },
+  removeButton: { backgroundColor: estavaCore.colors.dangerSoft },
+  removeText: { color: estavaCore.colors.danger, fontWeight: "600" },
   disabledButton: { opacity: 0.7 }
 });

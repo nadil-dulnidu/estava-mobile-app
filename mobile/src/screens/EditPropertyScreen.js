@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { deleteProperty, getPropertyById, updateProperty } from "../api/propertyApi";
+import { estavaCore } from "../theme/estavaCore";
 
 const MAX_FEATURES = 20;
 const MAX_FEATURE_LENGTH = 50;
@@ -276,6 +277,7 @@ export default function EditPropertyScreen({ route, navigation }) {
       <Text style={styles.title}>Edit Property</Text>
       <Text style={styles.subtitle}>Update any property details, manage photos, change status, or delete the listing.</Text>
 
+      <Text style={styles.kicker}>Estava Real Estate</Text>
       {!!error && <Text style={styles.error}>{error}</Text>}
 
       <Text style={styles.sectionTitle}>Property Status</Text>
@@ -427,61 +429,61 @@ export default function EditPropertyScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f7fa" },
+  container: { flex: 1, backgroundColor: estavaCore.colors.background },
   content: { padding: 16 },
-  centered: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#f5f7fa" },
-  title: { fontSize: 24, fontWeight: "800", color: "#111827" },
-  subtitle: { marginTop: 6, marginBottom: 16, color: "#4b5563" },
-  error: { color: "#b91c1c", marginBottom: 8 },
-  sectionTitle: { marginTop: 14, marginBottom: 8, fontSize: 16, fontWeight: "700", color: "#111827" },
-  helperText: { color: "#6b7280", marginBottom: 8, fontSize: 12 },
-  inputLabel: { fontWeight: "600", color: "#374151", marginBottom: 6 },
+  centered: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: estavaCore.colors.background },
+  title: { fontSize: 24, fontWeight: "800", color: estavaCore.colors.primary },
+  subtitle: { marginTop: 6, marginBottom: 16, color: estavaCore.colors.textSecondary },
+  error: { color: estavaCore.colors.danger, marginBottom: 8 },
+  sectionTitle: { marginTop: 14, marginBottom: 8, fontSize: 16, fontWeight: "700", color: estavaCore.colors.primary },
+  helperText: { color: estavaCore.colors.textSecondary, marginBottom: 8, fontSize: 12 },
+  inputLabel: { fontWeight: "600", color: estavaCore.colors.textSecondary, marginBottom: 6 },
   input: {
-    backgroundColor: "#fff",
+    backgroundColor: estavaCore.colors.surface,
     borderWidth: 1,
-    borderColor: "#d1d5db",
+    borderColor: estavaCore.colors.border,
     borderRadius: 10,
     padding: 12,
     marginBottom: 12
   },
   textArea: { minHeight: 100, textAlignVertical: "top" },
   row: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 },
-  chip: { backgroundColor: "#e5e7eb", borderRadius: 20, paddingVertical: 8, paddingHorizontal: 12 },
-  chipActive: { backgroundColor: "#1d4ed8" },
-  chipText: { color: "#374151", fontWeight: "600" },
+  chip: { backgroundColor: estavaCore.colors.surfaceMuted, borderRadius: 20, paddingVertical: 8, paddingHorizontal: 12 },
+  chipActive: { backgroundColor: estavaCore.colors.primary },
+  chipText: { color: estavaCore.colors.textSecondary, fontWeight: "600" },
   chipTextActive: { color: "#fff" },
   inlineInputs: { flexDirection: "row", gap: 10 },
   inlineField: { flex: 1 },
   inlineInput: { marginBottom: 12 },
   statusChipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 },
-  statusChip: { backgroundColor: "#e5e7eb", borderRadius: 16, paddingVertical: 7, paddingHorizontal: 12 },
-  statusChipActive: { backgroundColor: "#1d4ed8" },
-  statusChipText: { color: "#374151", fontWeight: "600" },
+  statusChip: { backgroundColor: estavaCore.colors.surfaceMuted, borderRadius: 16, paddingVertical: 7, paddingHorizontal: 12 },
+  statusChipActive: { backgroundColor: estavaCore.colors.primary },
+  statusChipText: { color: estavaCore.colors.textSecondary, fontWeight: "600" },
   statusChipTextActive: { color: "#ffffff" },
   imageRow: { marginBottom: 12 },
   previewCard: { width: 140, marginRight: 10 },
-  previewImage: { width: 140, height: 95, borderRadius: 12, backgroundColor: "#e5e7eb" },
+  previewImage: { width: 140, height: 95, borderRadius: 12, backgroundColor: estavaCore.colors.surfaceMuted },
   removedPreviewImage: { opacity: 0.35 },
   removePhotoButton: {
     marginTop: 6,
-    backgroundColor: "#fee2e2",
+    backgroundColor: estavaCore.colors.dangerSoft,
     borderRadius: 8,
     paddingVertical: 6,
     alignItems: "center"
   },
-  removePhotoButtonActive: { backgroundColor: "#e5e7eb" },
-  removePhotoButtonText: { color: "#b91c1c", fontWeight: "700", fontSize: 12 },
-  emptyPhotosText: { color: "#6b7280", marginBottom: 12 },
+  removePhotoButtonActive: { backgroundColor: estavaCore.colors.surfaceMuted },
+  removePhotoButtonText: { color: estavaCore.colors.danger, fontWeight: "700", fontSize: 12 },
+  emptyPhotosText: { color: estavaCore.colors.textSecondary, marginBottom: 12 },
   pickImageButton: {
-    backgroundColor: "#dbeafe",
+    backgroundColor: estavaCore.colors.accentSoft,
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: "center",
     marginBottom: 12
   },
-  pickImageButtonText: { color: "#1d4ed8", fontWeight: "700" },
+  pickImageButtonText: { color: estavaCore.colors.accent, fontWeight: "700" },
   saveButton: {
-    backgroundColor: "#1d4ed8",
+    backgroundColor: estavaCore.colors.primary,
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: "center",
@@ -490,14 +492,14 @@ const styles = StyleSheet.create({
   },
   saveButtonText: { color: "#fff", fontWeight: "700" },
   deleteButton: {
-    backgroundColor: "#fee2e2",
-    borderColor: "#ef4444",
+    backgroundColor: estavaCore.colors.dangerSoft,
+    borderColor: estavaCore.colors.danger,
     borderWidth: 1,
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: "center",
     marginBottom: 20
   },
-  deleteButtonText: { color: "#b91c1c", fontWeight: "700" },
+  deleteButtonText: { color: estavaCore.colors.danger, fontWeight: "700" },
   disabledButton: { opacity: 0.6 }
 });
