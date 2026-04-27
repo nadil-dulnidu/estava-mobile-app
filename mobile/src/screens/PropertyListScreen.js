@@ -9,11 +9,14 @@ import {
   ActivityIndicator,
   RefreshControl,
   ScrollView,
-  Image
+  Image,
+  PanResponder,
+  Animated
 } from "react-native";
 import { getMyProperties, getProperties } from "../api/propertyApi";
 import { useAuth } from "../context/AuthContext";
 import { estavaCore } from "../theme/estavaCore";
+import { AppFooter, HeaderActions, QuickAccessMenu } from "../components/AppChrome";
 
 const resolveUserId = (entity) => {
   if (!entity) return "";
@@ -31,23 +34,86 @@ const dedupeProperties = (items) => {
   return Array.from(map.values());
 };
 
-const inSelectedPriceRange = (rawPrice, selectedPrice) => {
-  if (selectedPrice === "all") return true;
+const PRICE_MIN = 0;
+const PRICE_MAX = 10000000;
+const PRICE_STEP = 50000;
 
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+const formatCurrency = (value) => `LKR ${Number(value || 0).toLocaleString()}`;
+
+const inSelectedPriceRange = (rawPrice, minPrice, maxPrice) => {
   const price = Number(rawPrice || 0);
-
-  if (selectedPrice.endsWith("+")) {
-    const minPrice = Number(selectedPrice.replace("+", ""));
-    return price >= minPrice;
-  }
-
-  const [min, max] = selectedPrice.split("-");
-  const minPrice = Number(min);
-  const maxPrice = Number(max);
   return price >= minPrice && price <= maxPrice;
 };
 
-export default function PropertyListScreen({ navigation }) {
+const RangeSlider = ({ min, max, lowerValue, upperValue, onChangeLower, onChangeUpper }) => {
+  const [trackWidth, setTrackWidth] = useState(1);
+  const lowerX = new Animated.Value(0);
+  const upperX = new Animated.Value(0);
+  const lowerStart = React.useRef(0);
+  const upperStart = React.useRef(0);
+
+  const valueToX = (value) => ((value - min) / (max - min)) * trackWidth;
+  const xToValue = (x) => clamp(Math.round((min + (x / trackWidth) * (max - min)) / PRICE_STEP) * PRICE_STEP, min, max);
+
+  lowerX.setValue(valueToX(lowerValue));
+  upperX.setValue(valueToX(upperValue));
+
+  const lowerResponder = PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderGrant: () => {
+      lowerStart.current = valueToX(lowerValue);
+    },
+    onPanResponderMove: (_, gesture) => {
+      const nextX = clamp(lowerStart.current + gesture.dx, 0, valueToX(upperValue) - 24);
+      const nextValue = xToValue(nextX);
+      onChangeLower(Math.min(nextValue, upperValue - PRICE_STEP));
+    }
+  });
+
+  const upperResponder = PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderGrant: () => {
+      upperStart.current = valueToX(upperValue);
+    },
+    onPanResponderMove: (_, gesture) => {
+      const nextX = clamp(upperStart.current + gesture.dx, valueToX(lowerValue) + 24, trackWidth);
+      const nextValue = xToValue(nextX);
+      onChangeUpper(Math.max(nextValue, lowerValue + PRICE_STEP));
+    }
+  });
+
+  return (
+    <View
+      style={styles.rangeContainer}
+      onLayout={(event) => setTrackWidth(event.nativeEvent.layout.width)}
+    >
+      <View style={styles.rangeTrack} />
+      <View
+        style={[
+          styles.rangeSelection,
+          {
+            left: valueToX(lowerValue),
+            width: Math.max(0, valueToX(upperValue) - valueToX(lowerValue))
+          }
+        ]}
+      />
+      <Animated.View
+        style={[styles.rangeThumb, { left: Math.max(0, valueToX(lowerValue) - 12) }]}
+        {...lowerResponder.panHandlers}
+      />
+      <Animated.View
+        style={[styles.rangeThumb, { left: Math.max(0, valueToX(upperValue) - 12) }]}
+        {...upperResponder.panHandlers}
+      />
+    </View>
+  );
+};
+
+export default function PropertyListScreen({ navigation, route }) {
   const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -55,18 +121,13 @@ export default function PropertyListScreen({ navigation }) {
   const [error, setError] = useState("");
   const [showPriceFilter, setShowPriceFilter] = useState(false);
   const [showTypeFilter, setShowTypeFilter] = useState(false);
-  const [selectedPrice, setSelectedPrice] = useState("all");
+  const [selectedPriceMin, setSelectedPriceMin] = useState(PRICE_MIN);
+  const [selectedPriceMax, setSelectedPriceMax] = useState(PRICE_MAX);
   const [selectedType, setSelectedType] = useState("all");
+  const [menuVisible, setMenuVisible] = useState(false);
 
   const currentUserId = resolveUserId(user);
-
-  const priceRanges = [
-    { label: "All Prices", value: "all" },
-    { label: "Under LKR 500K", value: "0-500000" },
-    { label: "LKR 500K - 1M", value: "500000-1000000" },
-    { label: "LKR 1M - 2M", value: "1000000-2000000" },
-    { label: "Over LKR 2M", value: "2000000+" }
-  ];
+  const mineMode = route?.params?.viewMode === "mine";
 
   const propertyTypes = [
     { label: "All Types", value: "all" },
@@ -88,14 +149,15 @@ export default function PropertyListScreen({ navigation }) {
       try {
         setError("");
         const [publicResult, mineResult] = await Promise.all([
-          getProperties({ page: 1, limit: 50 }),
+          mineMode ? Promise.resolve({ items: [] }) : getProperties({ page: 1, limit: 50 }),
           getMyProperties({ page: 1, limit: 50 }).catch(() => ({ items: [] }))
         ]);
 
-        let mergedItems = dedupeProperties([
-          ...(publicResult?.items || []),
-          ...(mineResult?.items || [])
-        ]);
+        let mergedItems = mineMode
+          ? Array.isArray(mineResult?.items)
+            ? mineResult.items
+            : []
+          : dedupeProperties([...(publicResult?.items || []), ...(mineResult?.items || [])]);
 
         mergedItems = mergedItems.filter((item) => {
           const listingStatus = String(item?.listingStatus || "").toLowerCase();
@@ -107,7 +169,7 @@ export default function PropertyListScreen({ navigation }) {
         });
 
         mergedItems = mergedItems.filter((item) =>
-          inSelectedPriceRange(item?.price, selectedPrice)
+          inSelectedPriceRange(item?.price, selectedPriceMin, selectedPriceMax)
         );
 
         if (selectedType !== "all") {
@@ -124,14 +186,18 @@ export default function PropertyListScreen({ navigation }) {
         setRefreshing(false);
       }
     },
-    [currentUserId, selectedPrice, selectedType]
+    [currentUserId, mineMode, selectedPriceMax, selectedPriceMin, selectedType]
   );
 
   useEffect(() => {
     fetchProperties();
   }, [fetchProperties]);
 
-  const renderItem = ({ item }) => (
+  const renderItem = ({ item }) => {
+    const ownerId = resolveUserId(item?.createdBy);
+    const isOwnerItem = mineMode || (currentUserId && String(ownerId) === String(currentUserId));
+
+    return (
     <Pressable
       style={styles.card}
       onPress={() => navigation.navigate("PropertyDetail", { propertyId: item._id })}
@@ -146,18 +212,27 @@ export default function PropertyListScreen({ navigation }) {
         </View>
       )}
       <View style={styles.cardContent}>
-      <Text style={styles.title}>{item.title}</Text>
-      <Text style={styles.location}>{item.location}</Text>
-      <View style={styles.cardFooter}>
-        <Text style={styles.price}>LKR {Number(item.price || 0).toLocaleString()}</Text>
-        <View style={styles.metaChips}>
-          <Text style={styles.type}>{item.propertyType || "Property"}</Text>
-          <Text style={styles.statusChip}>{String(item?.listingStatus || "Available")}</Text>
+        <Text style={styles.title}>{item.title}</Text>
+        <Text style={styles.location}>{item.location}</Text>
+        <View style={styles.cardFooter}>
+          <Text style={styles.price}>{formatCurrency(item.price)}</Text>
+          <View style={styles.metaChips}>
+            <Text style={styles.type}>{item.propertyType || "Property"}</Text>
+            <Text style={styles.statusChip}>{String(item?.listingStatus || "available")}</Text>
+          </View>
         </View>
-      </View>
+        {isOwnerItem ? (
+          <Pressable
+            style={styles.editButton}
+            onPress={() => navigation.navigate("EditProperty", { propertyId: item._id })}
+          >
+            <Text style={styles.editButtonText}>Edit</Text>
+          </Pressable>
+        ) : null}
       </View>
     </Pressable>
-  );
+    );
+  };
 
   if (loading && !refreshing) {
     return (
@@ -169,105 +244,118 @@ export default function PropertyListScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      <QuickAccessMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+
+      <View style={styles.pageHeader}>
+        <View style={styles.pageHeaderText}>
+          <Text style={styles.pageTitle}>{mineMode ? "My Properties" : "Properties"}</Text>
+          <Text style={styles.pageSubtitle}>
+            {mineMode
+              ? "Keep your own listings close and edit them from the same card layout."
+              : "Browse listings, compare prices, and refine the results with friendly filters."}
+          </Text>
+        </View>
+        <HeaderActions
+          navigation={navigation}
+          user={user}
+          onMenuPress={() => setMenuVisible((current) => !current)}
+          menuOpen={menuVisible}
+        />
+      </View>
+
       <View style={styles.filtersContainer}>
         <Pressable
-          style={[styles.filterButton, selectedPrice !== "all" && styles.filterButtonActive]}
+          style={[styles.filterButton, showPriceFilter && styles.filterButtonActive]}
           onPress={() => {
             setShowPriceFilter((prev) => !prev);
             setShowTypeFilter(false);
           }}
-          accessibilityLabel="Price filter"
-          accessibilityRole="button"
         >
-          <Text style={styles.filterLabel}>Price</Text>
-          <Text style={styles.filterValue}>
-            {priceRanges.find((r) => r.value === selectedPrice)?.label || "All"}
-          </Text>
+          <Text style={styles.filterLabel}>Price range</Text>
+          <Text style={styles.filterValue}>{`${formatCurrency(selectedPriceMin)} - ${formatCurrency(selectedPriceMax)}`}</Text>
         </Pressable>
 
         <Pressable
-          style={[styles.filterButton, selectedType !== "all" && styles.filterButtonActive]}
+          style={[styles.filterButton, showTypeFilter && styles.filterButtonActive]}
           onPress={() => {
             setShowTypeFilter((prev) => !prev);
             setShowPriceFilter(false);
           }}
-          accessibilityLabel="Property type filter"
-          accessibilityRole="button"
         >
           <Text style={styles.filterLabel}>Type</Text>
-          <Text style={styles.filterValue}>
-            {propertyTypes.find((t) => t.value === selectedType)?.label || "All"}
-          </Text>
+          <Text style={styles.filterValue}>{propertyTypes.find((t) => t.value === selectedType)?.label || "All types"}</Text>
         </Pressable>
       </View>
 
-      {(selectedPrice !== "all" || selectedType !== "all") && (
+      {showPriceFilter && (
+        <View style={styles.dropdownPanel}>
+          <View style={styles.dropdownPanelHeader}>
+            <Text style={styles.dropdownPanelTitle}>Choose price range</Text>
+            <Pressable onPress={() => setShowPriceFilter(false)}>
+              <Text style={styles.dropdownPanelLink}>Done</Text>
+            </Pressable>
+          </View>
+          <Text style={styles.dropdownPanelHelper}>
+            Drag either handle to narrow the range. The list updates from the selected minimum and maximum.
+          </Text>
+          <View style={styles.rangeValueRow}>
+            <Text style={styles.rangeValueLabel}>Min</Text>
+            <Text style={styles.rangeValueLabel}>Max</Text>
+          </View>
+          <RangeSlider
+            min={PRICE_MIN}
+            max={PRICE_MAX}
+            lowerValue={selectedPriceMin}
+            upperValue={selectedPriceMax}
+            onChangeLower={(value) => setSelectedPriceMin(Math.min(value, selectedPriceMax - PRICE_STEP))}
+            onChangeUpper={(value) => setSelectedPriceMax(Math.max(value, selectedPriceMin + PRICE_STEP))}
+          />
+          <View style={styles.rangeSummaryRow}>
+            <Text style={styles.rangeSummaryText}>{formatCurrency(selectedPriceMin)}</Text>
+            <Text style={styles.rangeSummaryText}>{formatCurrency(selectedPriceMax)}</Text>
+          </View>
+        </View>
+      )}
+
+      {showTypeFilter && (
+        <View style={styles.dropdownPanel}>
+          <View style={styles.dropdownPanelHeader}>
+            <Text style={styles.dropdownPanelTitle}>Choose property type</Text>
+            <Pressable onPress={() => setShowTypeFilter(false)}>
+              <Text style={styles.dropdownPanelLink}>Done</Text>
+            </Pressable>
+          </View>
+          <View style={styles.typeGrid}>
+            {propertyTypes.map((type) => {
+              const active = selectedType === type.value;
+              return (
+                <Pressable
+                  key={type.value}
+                  style={[styles.typeOption, active && styles.typeOptionActive]}
+                  onPress={() => setSelectedType(type.value)}
+                >
+                  <Text style={[styles.typeOptionText, active && styles.typeOptionTextActive]}>{type.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      )}
+
+      {(selectedPriceMin !== PRICE_MIN || selectedPriceMax !== PRICE_MAX || selectedType !== "all") && (
         <View style={styles.activeFilterRow}>
-          <Text style={styles.activeFilterLabel}>Active filters:</Text>
+          <Text style={styles.activeFilterLabel}>Active filters</Text>
           <Pressable
             style={styles.clearFilterButton}
             onPress={() => {
-              setSelectedPrice("all");
+              setSelectedPriceMin(PRICE_MIN);
+              setSelectedPriceMax(PRICE_MAX);
               setSelectedType("all");
             }}
           >
             <Text style={styles.clearFilterText}>Clear all</Text>
           </Pressable>
         </View>
-      )}
-
-      {showPriceFilter && (
-        <ScrollView style={styles.dropdown}>
-          {priceRanges.map((range) => (
-            <Pressable
-              key={range.value}
-              style={[
-                styles.dropdownItem,
-                selectedPrice === range.value && styles.dropdownItemActive
-              ]}
-              onPress={() => {
-                setSelectedPrice(range.value);
-                setShowPriceFilter(false);
-              }}
-            >
-              <Text
-                style={[
-                  styles.dropdownText,
-                  selectedPrice === range.value && styles.dropdownTextActive
-                ]}
-              >
-                {range.label}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-      )}
-
-      {showTypeFilter && (
-        <ScrollView style={styles.dropdown}>
-          {propertyTypes.map((type) => (
-            <Pressable
-              key={type.value}
-              style={[
-                styles.dropdownItem,
-                selectedType === type.value && styles.dropdownItemActive
-              ]}
-              onPress={() => {
-                setSelectedType(type.value);
-                setShowTypeFilter(false);
-              }}
-            >
-              <Text
-                style={[
-                  styles.dropdownText,
-                  selectedType === type.value && styles.dropdownTextActive
-                ]}
-              >
-                {type.label}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
       )}
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -299,6 +387,8 @@ export default function PropertyListScreen({ navigation }) {
           <RefreshControl refreshing={refreshing} onRefresh={() => fetchProperties(true)} />
         }
       />
+
+      <AppFooter navigation={navigation} activeRoute="PropertyList" />
     </View>
   );
 }
@@ -313,6 +403,33 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: estavaCore.colors.background
+  },
+  pageHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    backgroundColor: estavaCore.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: estavaCore.colors.border
+  },
+  pageHeaderText: {
+    flex: 1,
+    paddingRight: 8
+  },
+  pageTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: estavaCore.colors.primary
+  },
+  pageSubtitle: {
+    marginTop: 4,
+    fontSize: 13,
+    lineHeight: 18,
+    color: estavaCore.colors.textSecondary
   },
   filtersContainer: {
     flexDirection: "row",
@@ -372,28 +489,113 @@ const styles = StyleSheet.create({
     color: estavaCore.colors.primary,
     marginTop: 2
   },
-  dropdown: {
-    maxHeight: 200,
+  dropdownPanel: {
+    marginHorizontal: 16,
+    marginBottom: 12,
     backgroundColor: estavaCore.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: estavaCore.colors.border
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
+    borderRadius: 12,
+    padding: 14,
+    ...estavaCore.shadow.card
   },
-  dropdownItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f2f4f6"
+  dropdownPanelHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12
   },
-  dropdownItemActive: {
-    backgroundColor: "#e8f5ef"
+  dropdownPanelTitle: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "700",
+    color: estavaCore.colors.primary
   },
-  dropdownText: {
-    fontSize: 14,
+  dropdownPanelLink: {
+    color: estavaCore.colors.accent,
+    fontWeight: "700",
+    fontSize: 13
+  },
+  dropdownPanelHelper: {
+    marginTop: 8,
+    fontSize: 12,
     color: estavaCore.colors.textPrimary
   },
-  dropdownTextActive: {
+  rangeValueRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 14
+  },
+  rangeValueLabel: {
+    fontSize: 12,
     fontWeight: "700",
-    color: estavaCore.colors.accent
+    color: estavaCore.colors.textSecondary
+  },
+  rangeContainer: {
+    height: 56,
+    justifyContent: "center",
+    marginTop: 12
+  },
+  rangeTrack: {
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: estavaCore.colors.surfaceMuted
+  },
+  rangeSelection: {
+    position: "absolute",
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: estavaCore.colors.accent
+  },
+  rangeThumb: {
+    position: "absolute",
+    top: 16,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: estavaCore.colors.surface,
+    borderWidth: 2,
+    borderColor: estavaCore.colors.accent,
+    ...estavaCore.shadow.card
+  },
+  rangeSummaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 10
+  },
+  rangeSummaryText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: estavaCore.colors.primary
+  },
+  typeGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 14
+  },
+  typeOption: {
+    minWidth: "48%",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
+    backgroundColor: estavaCore.colors.background,
+    alignItems: "center"
+  },
+  typeOptionActive: {
+    borderColor: estavaCore.colors.accent,
+    backgroundColor: estavaCore.colors.accentSoft
+  },
+  typeOptionText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: estavaCore.colors.textPrimary
+  },
+  typeOptionTextActive: {
+    color: estavaCore.colors.accent,
+    fontWeight: "700"
   },
   error: {
     marginHorizontal: 16,

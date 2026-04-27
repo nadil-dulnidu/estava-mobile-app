@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { notificationApi } from "../api/notificationApi";
 import { estavaCore } from "../theme/estavaCore";
+import { BellIcon, CalendarIcon, GridIcon, HeartIcon, InboxIcon, StarIcon } from "../components/AppIcons";
 
 export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState([]);
@@ -65,13 +66,13 @@ export default function NotificationsScreen() {
 
   const getIcon = (type) => {
     const icons = {
-      inquiry: "💬",
-      appointment: "📅",
-      property: "🏠",
-      review: "⭐",
-      system: "🔔"
+      inquiry: InboxIcon,
+      appointment: CalendarIcon,
+      property: GridIcon,
+      review: StarIcon,
+      system: BellIcon
     };
-    return icons[type] || "📬";
+    return icons[type] || InboxIcon;
   };
 
   return (
@@ -88,7 +89,12 @@ export default function NotificationsScreen() {
           keyExtractor={(item) => item._id}
           renderItem={({ item }) => (
             <View style={[styles.card, item.status === "unread" && styles.cardUnread]}>
-              <Text style={styles.icon}>{getIcon(item.type)}</Text>
+              <View style={styles.iconWrap}>
+                {(() => {
+                  const Icon = getIcon(item.type);
+                  return <Icon color={estavaCore.colors.accent} size={18} />;
+                })()}
+              </View>
               <View style={styles.content}>
                 <Text style={styles.itemTitle}>{item.title}</Text>
                 <Text style={styles.message}>{item.message}</Text>
@@ -136,7 +142,15 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: estavaCore.colors.accent
   },
-  icon: { fontSize: 20, marginRight: 12 },
+  iconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: estavaCore.colors.accentSoft,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12
+  },
   content: { flex: 1 },
   itemTitle: { fontSize: 14, fontWeight: "600", color: estavaCore.colors.textPrimary },
   message: { fontSize: 13, color: estavaCore.colors.textSecondary, marginTop: 4 },

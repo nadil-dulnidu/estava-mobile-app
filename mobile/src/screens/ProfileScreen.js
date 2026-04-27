@@ -15,6 +15,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../context/AuthContext";
 import { isTenDigitPhoneNumber, normalizePhoneNumber } from "../utils/phoneNumber";
 import { estavaCore } from "../theme/estavaCore";
+import { AppFooter, HeaderActions, QuickAccessMenu } from "../components/AppChrome";
 
 const getInitials = (name) => {
   const parts = String(name || "")
@@ -32,8 +33,8 @@ const getInitials = (name) => {
     .join("");
 };
 
-export default function ProfileScreen() {
-  const { user, loading, refreshProfile, updateProfile, changePassword, updateAvatar } = useAuth();
+export default function ProfileScreen({ navigation }) {
+  const { user, loading, refreshProfile, updateProfile, changePassword, updateAvatar, logout } = useAuth();
 
   const [fullName, setFullName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -45,6 +46,7 @@ export default function ProfileScreen() {
   const [profileSaving, setProfileSaving] = useState(false);
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [avatarSaving, setAvatarSaving] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -171,159 +173,181 @@ export default function ProfileScreen() {
   const anyActionLoading = loading || refreshing || profileSaving || passwordSaving || avatarSaving;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>My Profile</Text>
-      <Text style={styles.subtitle}>Manage your account details used across inquiries and bookings.</Text>
+    <View style={styles.screen}>
+      <QuickAccessMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <View style={styles.pageHeader}>
+          <View style={styles.pageHeaderText}>
+            <Text style={styles.title}>My Profile</Text>
+            <Text style={styles.subtitle}>Manage your account details used across inquiries and bookings.</Text>
+          </View>
+          <HeaderActions
+            navigation={navigation}
+            user={user}
+            onMenuPress={() => setMenuVisible((current) => !current)}
+            menuOpen={menuVisible}
+          />
+        </View>
 
-      {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
-      {successMessage ? <Text style={styles.success}>{successMessage}</Text> : null}
+        {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
+        {successMessage ? <Text style={styles.success}>{successMessage}</Text> : null}
 
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Profile Picture</Text>
-        <View style={styles.avatarRow}>
-          {user?.profileImage ? (
-            <Image source={{ uri: user.profileImage }} style={styles.avatarImage} />
-          ) : (
-            <View style={styles.avatarFallback}>
-              <Text style={styles.avatarFallbackText}>{getInitials(user?.fullName)}</Text>
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Profile Picture</Text>
+          <View style={styles.avatarRow}>
+            {user?.profileImage ? (
+              <Image source={{ uri: user.profileImage }} style={styles.avatarImage} />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarFallbackText}>{getInitials(user?.fullName)}</Text>
+              </View>
+            )}
+            <View style={styles.avatarActions}>
+              <Pressable
+                style={[styles.primaryButton, anyActionLoading && styles.buttonDisabled]}
+                onPress={onPickAvatar}
+                disabled={anyActionLoading}
+                accessibilityLabel="Upload profile picture"
+              >
+                {avatarSaving ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Text style={styles.primaryButtonText}>Upload Picture</Text>
+                )}
+              </Pressable>
+              <Pressable
+                style={[styles.secondaryButton, anyActionLoading && styles.buttonDisabled]}
+                onPress={onRefreshProfile}
+                disabled={anyActionLoading}
+                accessibilityLabel="Refresh profile details"
+              >
+                {refreshing ? (
+                  <ActivityIndicator size="small" color={estavaCore.colors.accent} />
+                ) : (
+                  <Text style={styles.secondaryButtonText}>Refresh</Text>
+                )}
+              </Pressable>
             </View>
-          )}
-          <View style={styles.avatarActions}>
-            <Pressable
-              style={[styles.primaryButton, anyActionLoading && styles.buttonDisabled]}
-              onPress={onPickAvatar}
-              disabled={anyActionLoading}
-              accessibilityLabel="Upload profile picture"
-            >
-              {avatarSaving ? (
-                <ActivityIndicator size="small" color="#ffffff" />
-              ) : (
-                <Text style={styles.primaryButtonText}>Upload Picture</Text>
-              )}
-            </Pressable>
-            <Pressable
-              style={[styles.secondaryButton, anyActionLoading && styles.buttonDisabled]}
-              onPress={onRefreshProfile}
-              disabled={anyActionLoading}
-              accessibilityLabel="Refresh profile details"
-            >
-              {refreshing ? (
-                <ActivityIndicator size="small" color="#1d4ed8" />
-              ) : (
-                <Text style={styles.secondaryButtonText}>Refresh</Text>
-              )}
-            </Pressable>
           </View>
         </View>
-      </View>
 
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Basic Details</Text>
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Basic Details</Text>
 
-        <Text style={styles.inputLabel}>Full Name</Text>
-        <TextInput
-          style={styles.input}
-          value={fullName}
-          onChangeText={setFullName}
-          placeholder="Your full name"
-          autoCapitalize="words"
-          autoComplete="name"
-          textContentType="name"
-          accessibilityLabel="Full name"
-          accessibilityHint="Used across inquiries and bookings"
-        />
+          <Text style={styles.inputLabel}>Full Name</Text>
+          <TextInput
+            style={styles.input}
+            value={fullName}
+            onChangeText={setFullName}
+            placeholder="Your full name"
+            autoCapitalize="words"
+            autoComplete="name"
+            textContentType="name"
+            accessibilityLabel="Full name"
+            accessibilityHint="Used across inquiries and bookings"
+          />
 
-        <Text style={styles.inputLabel}>Phone Number</Text>
-        <TextInput
-          style={styles.input}
-          value={phoneNumber}
-          onChangeText={(value) => setPhoneNumber(normalizePhoneNumber(value))}
-          placeholder="10-digit phone number"
-          keyboardType="phone-pad"
-          maxLength={10}
-          autoComplete="tel"
-          textContentType="telephoneNumber"
-          accessibilityLabel="Phone number"
-          accessibilityHint="Optional contact number used for inquiries and bookings"
-        />
+          <Text style={styles.inputLabel}>Phone Number</Text>
+          <TextInput
+            style={styles.input}
+            value={phoneNumber}
+            onChangeText={(value) => setPhoneNumber(normalizePhoneNumber(value))}
+            placeholder="10-digit phone number"
+            keyboardType="phone-pad"
+            maxLength={10}
+            autoComplete="tel"
+            textContentType="telephoneNumber"
+            accessibilityLabel="Phone number"
+            accessibilityHint="Optional contact number used for inquiries and bookings"
+          />
 
-        <Pressable
-          style={[styles.primaryButton, anyActionLoading && styles.buttonDisabled]}
-          onPress={onSaveProfile}
-          disabled={anyActionLoading}
-          accessibilityLabel="Save profile details"
-        >
-          {profileSaving ? (
-            <ActivityIndicator size="small" color="#ffffff" />
-          ) : (
-            <Text style={styles.primaryButtonText}>Save Profile</Text>
-          )}
+          <Pressable
+            style={[styles.primaryButton, anyActionLoading && styles.buttonDisabled]}
+            onPress={onSaveProfile}
+            disabled={anyActionLoading}
+            accessibilityLabel="Save profile details"
+          >
+            {profileSaving ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <Text style={styles.primaryButtonText}>Save Profile</Text>
+            )}
+          </Pressable>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Change Password</Text>
+
+          <Text style={styles.inputLabel}>Current Password</Text>
+          <TextInput
+            style={styles.input}
+            value={currentPassword}
+            onChangeText={setCurrentPassword}
+            placeholder="Current password"
+            secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="current-password"
+            textContentType="password"
+            accessibilityLabel="Current password"
+          />
+
+          <Text style={styles.inputLabel}>New Password</Text>
+          <TextInput
+            style={styles.input}
+            value={newPassword}
+            onChangeText={setNewPassword}
+            placeholder="At least 8 characters"
+            secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="new-password"
+            textContentType="newPassword"
+            accessibilityLabel="New password"
+          />
+
+          <Text style={styles.inputLabel}>Confirm New Password</Text>
+          <TextInput
+            style={styles.input}
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            placeholder="Repeat new password"
+            secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="new-password"
+            textContentType="newPassword"
+            accessibilityLabel="Confirm new password"
+          />
+
+          <Pressable
+            style={[styles.primaryButton, anyActionLoading && styles.buttonDisabled]}
+            onPress={onChangePassword}
+            disabled={anyActionLoading}
+            accessibilityLabel="Change account password"
+          >
+            {passwordSaving ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <Text style={styles.primaryButtonText}>Update Password</Text>
+            )}
+          </Pressable>
+        </View>
+
+        <Pressable style={styles.signOutButton} onPress={logout} disabled={anyActionLoading}>
+          <Text style={styles.signOutText}>Sign out</Text>
         </Pressable>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Change Password</Text>
-
-        <Text style={styles.inputLabel}>Current Password</Text>
-        <TextInput
-          style={styles.input}
-          value={currentPassword}
-          onChangeText={setCurrentPassword}
-          placeholder="Current password"
-          secureTextEntry
-          autoCapitalize="none"
-          autoCorrect={false}
-          autoComplete="current-password"
-          textContentType="password"
-          accessibilityLabel="Current password"
-        />
-
-        <Text style={styles.inputLabel}>New Password</Text>
-        <TextInput
-          style={styles.input}
-          value={newPassword}
-          onChangeText={setNewPassword}
-          placeholder="At least 8 characters"
-          secureTextEntry
-          autoCapitalize="none"
-          autoCorrect={false}
-          autoComplete="new-password"
-          textContentType="newPassword"
-          accessibilityLabel="New password"
-        />
-
-        <Text style={styles.inputLabel}>Confirm New Password</Text>
-        <TextInput
-          style={styles.input}
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          placeholder="Repeat new password"
-          secureTextEntry
-          autoCapitalize="none"
-          autoCorrect={false}
-          autoComplete="new-password"
-          textContentType="newPassword"
-          accessibilityLabel="Confirm new password"
-        />
-
-        <Pressable
-          style={[styles.primaryButton, anyActionLoading && styles.buttonDisabled]}
-          onPress={onChangePassword}
-          disabled={anyActionLoading}
-          accessibilityLabel="Change account password"
-        >
-          {passwordSaving ? (
-            <ActivityIndicator size="small" color="#ffffff" />
-          ) : (
-            <Text style={styles.primaryButtonText}>Update Password</Text>
-          )}
-        </Pressable>
-      </View>
-    </ScrollView>
+      </ScrollView>
+      <AppFooter navigation={navigation} activeRoute="Profile" />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: estavaCore.colors.background
+  },
   container: {
     flex: 1,
     backgroundColor: estavaCore.colors.background
@@ -332,7 +356,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 28,
-    gap: 2
+    gap: 2,
+    paddingBottom: 20
+  },
+  pageHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 6
+  },
+  pageHeaderText: {
+    flex: 1,
+    paddingRight: 8
   },
   title: {
     fontSize: 24,
@@ -427,6 +463,21 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     color: estavaCore.colors.accent,
+    fontWeight: "700"
+  },
+  signOutButton: {
+    marginTop: 6,
+    marginBottom: 8,
+    minHeight: 48,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: estavaCore.colors.danger,
+    backgroundColor: estavaCore.colors.dangerSoft,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  signOutText: {
+    color: estavaCore.colors.danger,
     fontWeight: "700"
   },
   buttonDisabled: {

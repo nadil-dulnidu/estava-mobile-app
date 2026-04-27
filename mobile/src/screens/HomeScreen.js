@@ -9,27 +9,17 @@ import {
   Text,
   View
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { getProperties } from "../api/propertyApi";
 import { useAuth } from "../context/AuthContext";
 import { estavaCore } from "../theme/estavaCore";
 import { getRecentlyViewedPropertyIds } from "../utils/recentlyViewedProperties";
+import { AppFooter, QuickAccessMenu, HeaderActions } from "../components/AppChrome";
 
 const resolveUserId = (entity) => {
   if (!entity) return "";
   if (typeof entity === "string") return entity;
   return entity._id || entity.id || "";
-};
-
-const getNameInitials = (name) => {
-  const words = String(name || "")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-
-  if (!words.length) return "U";
-  if (words.length === 1) return words[0].charAt(0).toUpperCase();
-
-  return `${words[0].charAt(0)}${words[1].charAt(0)}`.toUpperCase();
 };
 
 const getCreatedAtTime = (item) => {
@@ -38,27 +28,12 @@ const getCreatedAtTime = (item) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
-const fallbackMenu = [
-  { label: "Browse", route: "PropertyList" },
-  { label: "My Properties", route: "MyProperties" },
-  { label: "Post", route: "CreateProperty" },
-  { label: "Favorites", route: "Favorites" },
-  { label: "Inquiries", route: "Inquiries" },
-  { label: "Appointments", route: "Appointments" }
-];
-
-const footerLinks = [
-  { label: "Home", route: "Home" },
-  { label: "Properties", route: "PropertyList" },
-  { label: "Favorites", route: "Favorites" },
-  { label: "Profile", route: "Profile" }
-];
-
 export default function HomeScreen({ navigation }) {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [menuVisible, setMenuVisible] = useState(false);
 
   const currentUserId = resolveUserId(user);
 
@@ -81,6 +56,12 @@ export default function HomeScreen({ navigation }) {
   useEffect(() => {
     loadDashboardData();
   }, [loadDashboardData]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadDashboardData();
+    }, [loadDashboardData])
+  );
 
   const featuredProperties = useMemo(() => {
     return [...properties].sort((a, b) => getCreatedAtTime(b) - getCreatedAtTime(a)).slice(0, 3);
@@ -116,6 +97,7 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <View style={styles.root}>
+      <QuickAccessMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <View>
@@ -123,18 +105,12 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.headerTitle}>Welcome back, {user?.fullName || "User"}</Text>
             <Text style={styles.headerSubline}>Browse curated listings and manage your activity</Text>
           </View>
-          <View style={styles.headerActions}>
-            <Pressable style={styles.iconButton} onPress={() => navigation.navigate("Notifications")}>
-              <Text style={styles.iconButtonText}>N</Text>
-            </Pressable>
-            <Pressable style={styles.avatarButton} onPress={() => navigation.navigate("Profile")}>
-              {user?.profileImage ? (
-                <Image source={{ uri: user.profileImage }} style={styles.avatarImage} />
-              ) : (
-                <Text style={styles.avatarText}>{getNameInitials(user?.fullName)}</Text>
-              )}
-            </Pressable>
-          </View>
+          <HeaderActions
+            navigation={navigation}
+            user={user}
+            onMenuPress={() => setMenuVisible((current) => !current)}
+            menuOpen={menuVisible}
+          />
         </View>
 
         {!!error && <Text style={styles.errorText}>{error}</Text>}
@@ -160,14 +136,6 @@ export default function HomeScreen({ navigation }) {
           />
         )}
 
-        <View style={styles.menuGrid}>
-          {fallbackMenu.map((menu) => (
-            <Pressable key={menu.route} style={styles.menuItem} onPress={() => navigation.navigate(menu.route)}>
-              <Text style={styles.menuItemText}>{menu.label}</Text>
-            </Pressable>
-          ))}
-        </View>
-
         <View style={styles.sectionHead}>
           <Text style={styles.sectionTitle}>Recommended For You</Text>
           <Pressable onPress={() => navigation.navigate("PropertyList")}>
@@ -183,22 +151,8 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.stackList}>{recommendedProperties.map((item) => renderPropertyCard(item, false))}</View>
         )}
 
-        <Pressable style={styles.logoutButton} onPress={logout}>
-          <Text style={styles.logoutButtonText}>Sign out</Text>
-        </Pressable>
       </ScrollView>
-
-      <View style={styles.footer}>
-        {footerLinks.map((link) => (
-          <Pressable
-            key={link.route}
-            style={[styles.footerItem, link.route === "Home" && styles.footerItemActive]}
-            onPress={() => navigation.navigate(link.route)}
-          >
-            <Text style={[styles.footerItemText, link.route === "Home" && styles.footerItemTextActive]}>{link.label}</Text>
-          </Pressable>
-        ))}
-      </View>
+      <AppFooter navigation={navigation} activeRoute="Home" />
     </View>
   );
 }
@@ -241,41 +195,6 @@ const styles = StyleSheet.create({
     maxWidth: 220,
     lineHeight: 18,
     fontSize: 12
-  },
-  headerActions: {
-    flexDirection: "row",
-    gap: estavaCore.spacing.sm
-  },
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: estavaCore.radius.sm,
-    borderWidth: 1,
-    borderColor: estavaCore.colors.border,
-    backgroundColor: estavaCore.colors.surface,
-    alignItems: "center",
-    justifyContent: "center"
-  },
-  iconButtonText: {
-    color: estavaCore.colors.primary,
-    fontWeight: "700"
-  },
-  avatarButton: {
-    width: 40,
-    height: 40,
-    borderRadius: estavaCore.radius.full,
-    backgroundColor: estavaCore.colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden"
-  },
-  avatarImage: {
-    width: "100%",
-    height: "100%"
-  },
-  avatarText: {
-    color: estavaCore.colors.surface,
-    fontWeight: "700"
   },
   errorText: {
     marginBottom: estavaCore.spacing.md,
@@ -355,29 +274,6 @@ const styles = StyleSheet.create({
     color: estavaCore.colors.accent,
     fontWeight: "700"
   },
-  menuGrid: {
-    marginTop: estavaCore.spacing.xl,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: estavaCore.spacing.sm
-  },
-  menuItem: {
-    width: "48%",
-    minHeight: 58,
-    borderRadius: estavaCore.radius.sm,
-    borderWidth: 1,
-    borderColor: estavaCore.colors.border,
-    backgroundColor: estavaCore.colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
-    ...estavaCore.shadow.card
-  },
-  menuItemText: {
-    color: estavaCore.colors.textPrimary,
-    fontWeight: "600",
-    fontSize: 13,
-    textAlign: "center"
-  },
   stackList: {
     gap: estavaCore.spacing.md
   },
@@ -392,48 +288,7 @@ const styles = StyleSheet.create({
     color: estavaCore.colors.textSecondary,
     lineHeight: 20
   },
-  logoutButton: {
-    marginTop: estavaCore.spacing.xl,
-    minHeight: 48,
-    borderRadius: estavaCore.radius.sm,
-    borderWidth: 1,
-    borderColor: estavaCore.colors.danger,
-    backgroundColor: estavaCore.colors.dangerSoft,
-    alignItems: "center",
-    justifyContent: "center"
-  },
-  logoutButtonText: {
-    color: estavaCore.colors.danger,
-    fontWeight: "700"
-  },
-  footer: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 72,
-    flexDirection: "row",
-    borderTopWidth: 1,
-    borderTopColor: estavaCore.colors.border,
-    backgroundColor: estavaCore.colors.surface
-  },
-  footerItem: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center"
-  },
-  footerItemActive: {
-    backgroundColor: estavaCore.colors.accentSoft,
-    borderTopWidth: 2,
-    borderTopColor: estavaCore.colors.accent
-  },
-  footerItemText: {
-    color: estavaCore.colors.textSecondary,
-    fontWeight: "600",
-    fontSize: 12
-  },
-  footerItemTextActive: {
-    color: estavaCore.colors.accent,
-    fontWeight: "700"
+  footerSpacer: {
+    height: 72
   }
 });

@@ -5,7 +5,6 @@ import LoginScreen from "../screens/LoginScreen";
 import RegisterScreen from "../screens/RegisterScreen";
 import HomeScreen from "../screens/HomeScreen";
 import PropertyListScreen from "../screens/PropertyListScreen";
-import MyPropertiesScreen from "../screens/MyPropertiesScreen";
 import PropertyDetailScreen from "../screens/PropertyDetailScreen";
 import EditPropertyScreen from "../screens/EditPropertyScreen";
 import FavoritesScreen from "../screens/FavoritesScreen";
@@ -49,7 +48,8 @@ export default function AppNavigator() {
           />
           <Stack.Screen
             name="MyProperties"
-            component={MyPropertiesScreen}
+            component={PropertyListScreen}
+            initialParams={{ viewMode: "mine" }}
             options={{ title: "My Properties" }}
           />
           <Stack.Screen

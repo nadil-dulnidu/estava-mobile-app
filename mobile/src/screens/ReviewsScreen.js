@@ -15,6 +15,7 @@ import {
 import { reviewApi } from "../api/reviewApi";
 import { getProperties } from "../api/propertyApi";
 import { estavaCore } from "../theme/estavaCore";
+import { StarIcon } from "../components/AppIcons";
 
 export default function ReviewsScreen({ route, navigation }) {
   const [reviews, setReviews] = useState([]);
@@ -149,7 +150,17 @@ export default function ReviewsScreen({ route, navigation }) {
     }
   };
 
-  const renderStars = (count) => "⭐".repeat(Math.min(count, 5));
+  const renderStars = (count) => {
+    const total = Math.max(0, Math.min(5, Math.round(Number(count) || 0)));
+    return Array.from({ length: 5 }, (_, index) => (
+      <StarIcon
+        key={index}
+        filled={index < total}
+        color={index < total ? estavaCore.colors.accent : estavaCore.colors.border}
+        size={16}
+      />
+    ));
+  };
 
   const onDeleteReview = (reviewId) => {
     Alert.alert("Delete review", "Are you sure you want to delete this review?", [
@@ -201,7 +212,7 @@ export default function ReviewsScreen({ route, navigation }) {
               <Text style={styles.target}>
                 {item.propertyId?.title || item.agentId?.fullName || "Target"}
               </Text>
-              <Text style={styles.stars}>{renderStars(item.rating)}</Text>
+              <View style={styles.starsRow}>{renderStars(item.rating)}</View>
               <Text style={styles.comment}>{item.comment}</Text>
               <Text style={styles.date}>{new Date(item.createdAt).toLocaleDateString()}</Text>
               <View style={styles.cardActions}>
@@ -271,7 +282,11 @@ export default function ReviewsScreen({ route, navigation }) {
                       onPress={() => setRating(star.toString())}
                       style={[styles.starButton, star <= parseInt(rating, 10) && styles.starSelected]}
                     >
-                      <Text style={styles.starText}>⭐</Text>
+                      <StarIcon
+                        filled={star <= parseInt(rating, 10)}
+                        color={star <= parseInt(rating, 10) ? estavaCore.colors.accent : estavaCore.colors.border}
+                        size={22}
+                      />
                     </Pressable>
                   ))}
                 </View>
@@ -317,7 +332,11 @@ export default function ReviewsScreen({ route, navigation }) {
                   onPress={() => setEditRating(star.toString())}
                   style={[styles.starButton, star <= parseInt(editRating, 10) && styles.starSelected]}
                 >
-                  <Text style={styles.starText}>⭐</Text>
+                  <StarIcon
+                    filled={star <= parseInt(editRating, 10)}
+                    color={star <= parseInt(editRating, 10) ? estavaCore.colors.accent : estavaCore.colors.border}
+                    size={22}
+                  />
                 </Pressable>
               ))}
             </View>
@@ -381,7 +400,7 @@ const styles = StyleSheet.create({
     ...estavaCore.shadow.card
   },
   target: { fontSize: 16, fontWeight: "600", color: estavaCore.colors.textPrimary },
-  stars: { fontSize: 16, marginTop: 6 },
+  starsRow: { flexDirection: "row", gap: 4, marginTop: 6 },
   comment: { fontSize: 14, color: estavaCore.colors.textSecondary, marginTop: 6 },
   date: { fontSize: 12, color: estavaCore.colors.textSecondary, marginTop: 6 },
   cardActions: { marginTop: 8, flexDirection: "row", gap: 14 },
@@ -400,7 +419,6 @@ const styles = StyleSheet.create({
   ratingContainer: { flexDirection: "row", justifyContent: "space-around", marginBottom: 12 },
   starButton: { padding: 8 },
   starSelected: { transform: [{ scale: 1.2 }] },
-  starText: { fontSize: 24 },
   modalInput: { borderWidth: 1, borderColor: estavaCore.colors.border, borderRadius: 8, padding: 10, marginBottom: 12, backgroundColor: estavaCore.colors.surface },
   modalButtons: { flexDirection: "row", justifyContent: "space-around" },
   cancelBtn: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, backgroundColor: estavaCore.colors.surfaceMuted },
