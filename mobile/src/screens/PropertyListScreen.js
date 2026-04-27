@@ -29,6 +29,22 @@ const dedupeProperties = (items) => {
   return Array.from(map.values());
 };
 
+const inSelectedPriceRange = (rawPrice, selectedPrice) => {
+  if (selectedPrice === "all") return true;
+
+  const price = Number(rawPrice || 0);
+
+  if (selectedPrice.endsWith("+")) {
+    const minPrice = Number(selectedPrice.replace("+", ""));
+    return price >= minPrice;
+  }
+
+  const [min, max] = selectedPrice.split("-");
+  const minPrice = Number(min);
+  const maxPrice = Number(max);
+  return price >= minPrice && price <= maxPrice;
+};
+
 export default function PropertyListScreen({ navigation }) {
   const { user } = useAuth();
   const [items, setItems] = useState([]);
@@ -59,65 +75,59 @@ export default function PropertyListScreen({ navigation }) {
     { label: "Commercial", value: "Commercial" }
   ];
 
-  const fetchProperties = useCallback(async (isRefresh = false) => {
-    if (isRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
+  const fetchProperties = useCallback(
+    async (isRefresh = false) => {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
 
-    try {
-      setError("");
-      const [publicResult, mineResult] = await Promise.all([
-        getProperties({ page: 1, limit: 50 }),
-        getMyProperties({ page: 1, limit: 50 }).catch(() => ({ items: [] }))
-      ]);
+      try {
+        setError("");
+        const [publicResult, mineResult] = await Promise.all([
+          getProperties({ page: 1, limit: 50 }),
+          getMyProperties({ page: 1, limit: 50 }).catch(() => ({ items: [] }))
+        ]);
 
-      let mergedItems = dedupeProperties([
-        ...(publicResult?.items || []),
-        ...(mineResult?.items || [])
-      ]);
+        let mergedItems = dedupeProperties([
+          ...(publicResult?.items || []),
+          ...(mineResult?.items || [])
+        ]);
 
-      // Filter by listing status
-      mergedItems = mergedItems.filter((item) => {
-        const listingStatus = String(item?.listingStatus || "").toLowerCase();
-        if (listingStatus !== "delisted") {
-          return true;
+        mergedItems = mergedItems.filter((item) => {
+          const listingStatus = String(item?.listingStatus || "").toLowerCase();
+          if (listingStatus !== "delisted") {
+            return true;
+          }
+          const ownerId = resolveUserId(item?.createdBy);
+          return Boolean(ownerId) && String(ownerId) === String(currentUserId);
+        });
+
+        mergedItems = mergedItems.filter((item) =>
+          inSelectedPriceRange(item?.price, selectedPrice)
+        );
+
+        if (selectedType !== "all") {
+          mergedItems = mergedItems.filter((item) => {
+            return String(item?.propertyType || "").toLowerCase() === selectedType.toLowerCase();
+          });
         }
-        const ownerId = resolveUserId(item?.createdBy);
-        return Boolean(ownerId) && String(ownerId) === String(currentUserId);
-      });
 
-      // Apply price filter
-      if (selectedPrice !== "all") {
-        const [min, max] = selectedPrice.split("-");
-        mergedItems = mergedItems.filter((item) => {
-          const price = Number(item?.price || 0);
-          const minPrice = Number(min);
-          const maxPrice = max === "+" ? Infinity : Number(max);
-          return price >= minPrice && price <= maxPrice;
-        });
+        setItems(mergedItems);
+      } catch (fetchError) {
+        setError(fetchError?.response?.data?.message || "Failed to load properties");
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
       }
-
-      // Apply property type filter
-      if (selectedType !== "all") {
-        mergedItems = mergedItems.filter((item) => {
-          return item?.propertyType === selectedType;
-        });
-      }
-
-      setItems(mergedItems);
-    } catch (fetchError) {
-      setError(fetchError?.response?.data?.message || "Failed to load properties");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [selectedPrice, selectedType]);
+    },
+    [currentUserId, selectedPrice, selectedType]
+  );
 
   useEffect(() => {
     fetchProperties();
-  }, [selectedPrice, selectedType, fetchProperties]);
+  }, [fetchProperties]);
 
   const renderItem = ({ item }) => (
     <Pressable
@@ -145,15 +155,17 @@ export default function PropertyListScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Filters Header */}
       <View style={styles.filtersContainer}>
         <Pressable
           style={[styles.filterButton, selectedPrice !== "all" && styles.filterButtonActive]}
-          onPress={() => setShowPriceFilter(!showPriceFilter)}
+          onPress={() => {
+            setShowPriceFilter((prev) => !prev);
+            setShowTypeFilter(false);
+          }}
           accessibilityLabel="Price filter"
           accessibilityRole="button"
         >
-          <Text style={styles.filterLabel}>💰 Price</Text>
+          <Text style={styles.filterLabel}>Price</Text>
           <Text style={styles.filterValue}>
             {priceRanges.find((r) => r.value === selectedPrice)?.label || "All"}
           </Text>
@@ -161,30 +173,40 @@ export default function PropertyListScreen({ navigation }) {
 
         <Pressable
           style={[styles.filterButton, selectedType !== "all" && styles.filterButtonActive]}
-          onPress={() => setShowTypeFilter(!showTypeFilter)}
+          onPress={() => {
+            setShowTypeFilter((prev) => !prev);
+            setShowPriceFilter(false);
+          }}
           accessibilityLabel="Property type filter"
           accessibilityRole="button"
         >
-          <Text style={styles.filterLabel}>🏠 Type</Text>
+          <Text style={styles.filterLabel}>Type</Text>
           <Text style={styles.filterValue}>
             {propertyTypes.find((t) => t.value === selectedType)?.label || "All"}
           </Text>
         </Pressable>
       </View>
 
-      {/* Price Filter Dropdown */}
       {showPriceFilter && (
         <ScrollView style={styles.dropdown}>
           {priceRanges.map((range) => (
             <Pressable
               key={range.value}
-              style={[styles.dropdownItem, selectedPrice === range.value && styles.dropdownItemActive]}
+              style={[
+                styles.dropdownItem,
+                selectedPrice === range.value && styles.dropdownItemActive
+              ]}
               onPress={() => {
                 setSelectedPrice(range.value);
                 setShowPriceFilter(false);
               }}
             >
-              <Text style={[styles.dropdownText, selectedPrice === range.value && styles.dropdownTextActive]}>
+              <Text
+                style={[
+                  styles.dropdownText,
+                  selectedPrice === range.value && styles.dropdownTextActive
+                ]}
+              >
                 {range.label}
               </Text>
             </Pressable>
@@ -192,19 +214,26 @@ export default function PropertyListScreen({ navigation }) {
         </ScrollView>
       )}
 
-      {/* Type Filter Dropdown */}
       {showTypeFilter && (
         <ScrollView style={styles.dropdown}>
           {propertyTypes.map((type) => (
             <Pressable
               key={type.value}
-              style={[styles.dropdownItem, selectedType === type.value && styles.dropdownItemActive]}
+              style={[
+                styles.dropdownItem,
+                selectedType === type.value && styles.dropdownItemActive
+              ]}
               onPress={() => {
                 setSelectedType(type.value);
                 setShowTypeFilter(false);
               }}
             >
-              <Text style={[styles.dropdownText, selectedType === type.value && styles.dropdownTextActive]}>
+              <Text
+                style={[
+                  styles.dropdownText,
+                  selectedType === type.value && styles.dropdownTextActive
+                ]}
+              >
                 {type.label}
               </Text>
             </Pressable>
@@ -214,7 +243,6 @@ export default function PropertyListScreen({ navigation }) {
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      {/* Action Buttons */}
       <View style={styles.topActionRow}>
         <Pressable
           style={[styles.topActionButton, styles.secondaryActionButton]}
@@ -232,40 +260,12 @@ export default function PropertyListScreen({ navigation }) {
         </Pressable>
       </View>
 
-      {/* Properties List */}
       <FlatList
         data={items}
         keyExtractor={(item) => item._id}
         contentContainerStyle={styles.listContent}
         renderItem={renderItem}
         ListEmptyComponent={<Text style={styles.empty}>No properties match your filters.</Text>}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => fetchProperties(true)} />
-        }
-      />
-    </View>
-  );
-}
-    );
-  }
-
-  return (
-    <View style={styles.container}>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      <View style={styles.topActionRow}>
-        <Pressable style={[styles.topActionButton, styles.secondaryActionButton]} onPress={() => navigation.navigate("MyProperties")}>
-          <Text style={styles.secondaryActionText}>My Properties</Text>
-        </Pressable>
-        <Pressable style={[styles.topActionButton, styles.primaryActionButton]} onPress={() => navigation.navigate("CreateProperty")}>
-          <Text style={styles.primaryActionText}>Post your own property</Text>
-        </Pressable>
-      </View>
-      <FlatList
-        data={items}
-        keyExtractor={(item) => item._id}
-        contentContainerStyle={styles.listContent}
-        renderItem={renderItem}
-        ListEmptyComponent={<Text style={styles.empty}>No properties available yet.</Text>}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => fetchProperties(true)} />
         }
@@ -285,8 +285,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#f7f9fb"
   },
-
-  // Filters
   filtersContainer: {
     flexDirection: "row",
     gap: 8,
@@ -321,8 +319,6 @@ const styles = StyleSheet.create({
     color: "#000000",
     marginTop: 2
   },
-
-  // Dropdown
   dropdown: {
     maxHeight: 200,
     backgroundColor: "#ffffff",
@@ -346,8 +342,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#059669"
   },
-
-  // Error
   error: {
     marginHorizontal: 16,
     marginTop: 12,
@@ -360,8 +354,6 @@ const styles = StyleSheet.create({
     borderLeftColor: "#ba1a1a",
     fontSize: 13
   },
-
-  // Top action buttons
   topActionRow: {
     flexDirection: "row",
     gap: 8,
@@ -395,8 +387,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 14
   },
-
-  // List content
   listContent: {
     paddingHorizontal: 16,
     paddingVertical: 12,
