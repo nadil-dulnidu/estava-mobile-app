@@ -37,7 +37,7 @@ const dedupeProperties = (items) => {
 
 const PRICE_MIN = 0;
 const DEFAULT_PRICE_MAX = 10000000;
-const PRICE_STEP = 50000;
+const PRICE_STEP = 100000;
 const THUMB_SIZE = 24;
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -59,6 +59,7 @@ const RangeSlider = ({ min, max, lowerValue, upperValue, onChangeLower, onChange
   const upperX = React.useRef(new Animated.Value(0)).current;
   const safeMax = Math.max(max, min + PRICE_STEP);
   const usableWidth = Math.max(trackWidth, 1);
+  const thumbTravelWidth = Math.max(usableWidth - THUMB_SIZE, 1);
   const valueSpan = Math.max(safeMax - min, 1);
 
   useEffect(() => {
@@ -68,11 +69,11 @@ const RangeSlider = ({ min, max, lowerValue, upperValue, onChangeLower, onChange
 
   const valueToX = (value) => {
     const normalizedValue = clamp(value, min, safeMax);
-    return ((normalizedValue - min) / valueSpan) * usableWidth;
+    return ((normalizedValue - min) / valueSpan) * thumbTravelWidth;
   };
 
   const xToValue = (x) => {
-    const ratio = clamp(x / usableWidth, 0, 1);
+    const ratio = clamp(x / thumbTravelWidth, 0, 1);
     return clamp(Math.round((min + ratio * (safeMax - min)) / PRICE_STEP) * PRICE_STEP, min, safeMax);
   };
 
@@ -110,7 +111,7 @@ const RangeSlider = ({ min, max, lowerValue, upperValue, onChangeLower, onChange
           upperX.setValue(upperStart.current);
         },
         onPanResponderMove: (_, gesture) => {
-          const nextX = clamp(upperStart.current + gesture.dx, valueToX(lowerValue) + THUMB_SIZE, usableWidth);
+          const nextX = clamp(upperStart.current + gesture.dx, valueToX(lowerValue) + THUMB_SIZE, thumbTravelWidth);
           const nextValue = xToValue(nextX);
           upperX.setValue(nextX);
           upperChangeRef.current(Math.max(nextValue, lowerValue + PRICE_STEP));
@@ -494,7 +495,7 @@ export default function PropertyListScreen({ navigation, route }) {
             styles.topActionButton,
             styles.secondaryActionButton,
             isMainList && styles.topActionButtonActive,
-            isMainList && styles.primaryActionButtonActive
+            isMainList && styles.secondaryActionButtonActive
           ]}
           onPress={() => navigation.navigate("PropertyList", { viewMode: "all" })}
           accessibilityRole="button"
@@ -626,6 +627,7 @@ const styles = StyleSheet.create({
     borderColor: estavaCore.colors.border,
     borderRadius: 12,
     padding: 14,
+    maxWidth: '100%',
     ...estavaCore.shadow.card
   },
   dropdownPanelHeader: {
@@ -663,7 +665,8 @@ const styles = StyleSheet.create({
   rangeContainer: {
     height: 56,
     justifyContent: "center",
-    marginTop: 12
+    marginTop: 12,
+    overflow: "hidden"
   },
   rangeTrack: {
     height: 4,
