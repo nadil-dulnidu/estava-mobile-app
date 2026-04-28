@@ -1,5 +1,6 @@
 // Property List Screen with filters and property type selection
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   View,
   Text,
@@ -11,6 +12,7 @@ import {
   ScrollView,
   Image,
   PanResponder,
+  Animated,
 } from "react-native";
 import { getMyProperties, getProperties } from "../api/propertyApi";
 import { useAuth } from "../context/AuthContext";
@@ -51,12 +53,22 @@ const RangeSlider = ({ min, max, lowerValue, upperValue, onChangeLower, onChange
   const [trackWidth, setTrackWidth] = useState(1);
   const lowerStart = React.useRef(0);
   const upperStart = React.useRef(0);
+  const lowerChangeRef = React.useRef(onChangeLower);
+  const upperChangeRef = React.useRef(onChangeUpper);
+  const lowerX = React.useRef(new Animated.Value(0)).current;
+  const upperX = React.useRef(new Animated.Value(0)).current;
   const safeMax = Math.max(max, min + PRICE_STEP);
   const usableWidth = Math.max(trackWidth, 1);
+  const valueSpan = Math.max(safeMax - min, 1);
+
+  useEffect(() => {
+    lowerChangeRef.current = onChangeLower;
+    upperChangeRef.current = onChangeUpper;
+  }, [onChangeLower, onChangeUpper]);
 
   const valueToX = (value) => {
     const normalizedValue = clamp(value, min, safeMax);
-    return ((normalizedValue - min) / (safeMax - min || 1)) * usableWidth;
+    return ((normalizedValue - min) / valueSpan) * usableWidth;
   };
 
   const xToValue = (x) => {
@@ -64,31 +76,48 @@ const RangeSlider = ({ min, max, lowerValue, upperValue, onChangeLower, onChange
     return clamp(Math.round((min + ratio * (safeMax - min)) / PRICE_STEP) * PRICE_STEP, min, safeMax);
   };
 
-  const lowerResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onPanResponderGrant: () => {
-      lowerStart.current = valueToX(lowerValue);
-    },
-    onPanResponderMove: (_, gesture) => {
-      const nextX = clamp(lowerStart.current + gesture.dx, 0, valueToX(upperValue) - THUMB_SIZE);
-      const nextValue = xToValue(nextX);
-      onChangeLower(Math.min(nextValue, upperValue - PRICE_STEP));
-    }
-  });
+  useEffect(() => {
+    lowerX.setValue(valueToX(lowerValue));
+    upperX.setValue(valueToX(upperValue));
+  }, [lowerValue, upperValue, safeMax, usableWidth]);
 
-  const upperResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onPanResponderGrant: () => {
-      upperStart.current = valueToX(upperValue);
-    },
-    onPanResponderMove: (_, gesture) => {
-      const nextX = clamp(upperStart.current + gesture.dx, valueToX(lowerValue) + THUMB_SIZE, usableWidth);
-      const nextValue = xToValue(nextX);
-      onChangeUpper(Math.max(nextValue, lowerValue + PRICE_STEP));
-    }
-  });
+  const lowerResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderGrant: () => {
+          lowerStart.current = valueToX(lowerValue);
+          lowerX.setValue(lowerStart.current);
+        },
+        onPanResponderMove: (_, gesture) => {
+          const nextX = clamp(lowerStart.current + gesture.dx, 0, valueToX(upperValue) - THUMB_SIZE);
+          const nextValue = xToValue(nextX);
+          lowerX.setValue(nextX);
+          lowerChangeRef.current(Math.min(nextValue, upperValue - PRICE_STEP));
+        }
+      }),
+    [lowerValue, upperValue, safeMax, usableWidth]
+  );
+
+  const upperResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderGrant: () => {
+          upperStart.current = valueToX(upperValue);
+          upperX.setValue(upperStart.current);
+        },
+        onPanResponderMove: (_, gesture) => {
+          const nextX = clamp(upperStart.current + gesture.dx, valueToX(lowerValue) + THUMB_SIZE, usableWidth);
+          const nextValue = xToValue(nextX);
+          upperX.setValue(nextX);
+          upperChangeRef.current(Math.max(nextValue, lowerValue + PRICE_STEP));
+        }
+      }),
+    [lowerValue, upperValue, safeMax, usableWidth]
+  );
 
   return (
     <View
@@ -105,12 +134,12 @@ const RangeSlider = ({ min, max, lowerValue, upperValue, onChangeLower, onChange
           }
         ]}
       />
-      <View
-        style={[styles.rangeThumb, { left: Math.max(0, valueToX(lowerValue) - 12) }]}
+      <Animated.View
+        style={[styles.rangeThumb, { left: lowerX }]}
         {...lowerResponder.panHandlers}
       />
-      <View
-        style={[styles.rangeThumb, { left: Math.max(0, valueToX(upperValue) - 12) }]}
+      <Animated.View
+        style={[styles.rangeThumb, { left: upperX }]}
         {...upperResponder.panHandlers}
       />
     </View>
@@ -118,6 +147,7 @@ const RangeSlider = ({ min, max, lowerValue, upperValue, onChangeLower, onChange
 };
 
 export default function PropertyListScreen({ navigation, route }) {
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const [rawItems, setRawItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -317,7 +347,7 @@ export default function PropertyListScreen({ navigation, route }) {
     <View style={styles.container}>
       <QuickAccessMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
 
-      <View style={styles.pageHeader}>
+      <View style={[styles.pageHeader, { paddingTop: insets.top + 12 }] }>
         <View style={styles.pageHeaderText}>
           <Text style={styles.pageTitle}>{mineMode ? "My Properties" : "Properties"}</Text>
           <Text style={styles.pageSubtitle}>
@@ -452,7 +482,7 @@ export default function PropertyListScreen({ navigation, route }) {
             !isMainList && styles.topActionButtonActive,
             !isMainList && styles.secondaryActionButtonActive
           ]}
-          onPress={() => navigation.navigate("MyProperties")}
+          onPress={() => navigation.navigate("PropertyList", { viewMode: "mine" })}
           accessibilityRole="button"
         >
           <Text style={[styles.secondaryActionText, !isMainList && styles.secondaryActionTextActive]}>
@@ -466,7 +496,7 @@ export default function PropertyListScreen({ navigation, route }) {
             isMainList && styles.topActionButtonActive,
             isMainList && styles.primaryActionButtonActive
           ]}
-          onPress={() => navigation.navigate("PropertyList")}
+          onPress={() => navigation.navigate("PropertyList", { viewMode: "all" })}
           accessibilityRole="button"
         >
           <Text style={[styles.secondaryActionText, isMainList && styles.secondaryActionTextActive]}>
@@ -743,6 +773,15 @@ const styles = StyleSheet.create({
   },
   postActionWrap: {
     marginBottom: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: estavaCore.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: estavaCore.colors.border
+  },
+  topActionRow: {
+    flexDirection: "row",
+    gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: estavaCore.colors.surface,

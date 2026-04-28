@@ -10,6 +10,7 @@ import {
   View
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { getProperties } from "../api/propertyApi";
 import { useAuth } from "../context/AuthContext";
 import { estavaCore } from "../theme/estavaCore";
@@ -30,6 +31,7 @@ const getCreatedAtTime = (item) => {
 
 export default function HomeScreen({ navigation }) {
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -96,11 +98,11 @@ export default function HomeScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.root}>
+    <SafeAreaView style={styles.root} edges={["top"]}>
       <QuickAccessMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: insets.top + 12 }]}>
         <View style={styles.header}>
-          <View>
+          <View style={styles.headerLeft}>
             <Text style={styles.headerCaption}>Estava Real Estate</Text>
             <Text style={styles.headerTitle}>Welcome back, {user?.fullName || "User"}</Text>
             <Text style={styles.headerSubline}>Browse curated listings and manage your activity</Text>
@@ -153,7 +155,7 @@ export default function HomeScreen({ navigation }) {
 
       </ScrollView>
       <AppFooter navigation={navigation} activeRoute="Home" />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -168,15 +170,19 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: estavaCore.spacing.lg,
-    paddingTop: 32,
     paddingBottom: 96
   },
   header: {
+    marginTop: 8,
     marginBottom: estavaCore.spacing.lg,
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
     gap: 12
+  },
+  headerLeft: {
+    flex: 1,
+    paddingRight: 12
   },
   headerCaption: {
     color: estavaCore.colors.textSecondary,
@@ -184,16 +190,14 @@ const styles = StyleSheet.create({
     fontWeight: "600"
   },
   headerTitle: {
-    marginTop: 4,
+    marginTop: 0,
     fontSize: estavaCore.typography.h2.fontSize,
     fontWeight: estavaCore.typography.h2.fontWeight,
-    color: estavaCore.colors.primary,
-    maxWidth: 230
+    color: estavaCore.colors.primary
   },
   headerSubline: {
     marginTop: 6,
     color: estavaCore.colors.textSecondary,
-    maxWidth: 220,
     lineHeight: 18,
     fontSize: 12
   },
