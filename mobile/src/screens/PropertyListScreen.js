@@ -53,6 +53,8 @@ const RangeSlider = ({ min, max, lowerValue, upperValue, onChangeLower, onChange
   const [trackWidth, setTrackWidth] = useState(1);
   const lowerStart = React.useRef(0);
   const upperStart = React.useRef(0);
+  const lowerCurrentX = React.useRef(0);
+  const upperCurrentX = React.useRef(0);
   const lowerChangeRef = React.useRef(onChangeLower);
   const upperChangeRef = React.useRef(onChangeUpper);
   const lowerX = React.useRef(new Animated.Value(0)).current;
@@ -89,12 +91,22 @@ const RangeSlider = ({ min, max, lowerValue, upperValue, onChangeLower, onChange
         onMoveShouldSetPanResponder: () => true,
         onPanResponderGrant: () => {
           lowerStart.current = valueToX(lowerValue);
+          lowerCurrentX.current = lowerStart.current;
           lowerX.setValue(lowerStart.current);
         },
         onPanResponderMove: (_, gesture) => {
           const nextX = clamp(lowerStart.current + gesture.dx, 0, valueToX(upperValue) - THUMB_SIZE);
-          const nextValue = xToValue(nextX);
+          lowerCurrentX.current = nextX;
           lowerX.setValue(nextX);
+        },
+        onPanResponderRelease: (_, gesture) => {
+          const nextX = clamp(lowerStart.current + gesture.dx, 0, valueToX(upperValue) - THUMB_SIZE);
+          const nextValue = xToValue(nextX);
+          lowerChangeRef.current(Math.min(nextValue, upperValue - PRICE_STEP));
+        },
+        onPanResponderTerminate: (_, gesture) => {
+          const nextX = clamp(lowerStart.current + gesture.dx, 0, valueToX(upperValue) - THUMB_SIZE);
+          const nextValue = xToValue(nextX);
           lowerChangeRef.current(Math.min(nextValue, upperValue - PRICE_STEP));
         }
       }),
@@ -108,12 +120,22 @@ const RangeSlider = ({ min, max, lowerValue, upperValue, onChangeLower, onChange
         onMoveShouldSetPanResponder: () => true,
         onPanResponderGrant: () => {
           upperStart.current = valueToX(upperValue);
+          upperCurrentX.current = upperStart.current;
           upperX.setValue(upperStart.current);
         },
         onPanResponderMove: (_, gesture) => {
           const nextX = clamp(upperStart.current + gesture.dx, valueToX(lowerValue) + THUMB_SIZE, thumbTravelWidth);
-          const nextValue = xToValue(nextX);
+          upperCurrentX.current = nextX;
           upperX.setValue(nextX);
+        },
+        onPanResponderRelease: (_, gesture) => {
+          const nextX = clamp(upperStart.current + gesture.dx, valueToX(lowerValue) + THUMB_SIZE, thumbTravelWidth);
+          const nextValue = xToValue(nextX);
+          upperChangeRef.current(Math.max(nextValue, lowerValue + PRICE_STEP));
+        },
+        onPanResponderTerminate: (_, gesture) => {
+          const nextX = clamp(upperStart.current + gesture.dx, valueToX(lowerValue) + THUMB_SIZE, thumbTravelWidth);
+          const nextValue = xToValue(nextX);
           upperChangeRef.current(Math.max(nextValue, lowerValue + PRICE_STEP));
         }
       }),
