@@ -168,14 +168,15 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: estavaCore.spacing.lg,
-    paddingVertical: estavaCore.spacing.lg,
+    paddingTop: 32,
     paddingBottom: 96
   },
   header: {
     marginBottom: estavaCore.spacing.lg,
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center"
+    alignItems: "flex-start",
+    gap: 12
   },
   headerCaption: {
     color: estavaCore.colors.textSecondary,

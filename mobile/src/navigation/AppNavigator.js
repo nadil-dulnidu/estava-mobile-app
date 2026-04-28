@@ -40,22 +40,22 @@ export default function AppNavigator() {
     >
       {isAuthenticated ? (
         <>
-          <Stack.Screen name="Home" component={HomeScreen} options={{ title: "Dashboard" }} />
+          <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
           <Stack.Screen
             name="PropertyList"
             component={PropertyListScreen}
-            options={{ title: "Properties" }}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="MyProperties"
             component={PropertyListScreen}
             initialParams={{ viewMode: "mine" }}
-            options={{ title: "My Properties" }}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="CreateProperty"
             component={CreatePropertyScreen}
-            options={{ title: "Post Property" }}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="PropertyDetail"
