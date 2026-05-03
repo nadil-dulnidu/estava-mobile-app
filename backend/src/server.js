@@ -3,8 +3,7 @@ const http = require("http");
 const app = require("./app");
 const env = require("./config/env");
 const { connectDB, disconnectDB } = require("./config/db");
-const { initializeSocketServer } = require("./socket");
-
+const { initializeSocketServer } = require("./socket/index");
 let server;
 let retryTimer = null;
 let isShuttingDown = false;
