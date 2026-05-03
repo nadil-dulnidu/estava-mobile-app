@@ -1,7 +1,19 @@
 // API client helpers for backend communication and module-specific requests.
 import apiClient from "./client";
 
-const buildPropertyCreateFormData = (payload) => {
+// Convert image URI to blob for proper React Native FormData handling.
+const uriToBlob = async (uri) => {
+  try {
+    const response = await fetch(uri);
+    if (!response.ok) throw new Error(`Failed to fetch image: ${response.status}`);
+    return await response.blob();
+  } catch (error) {
+    console.error("Error converting URI to blob:", error);
+    throw error;
+  }
+};
+
+const buildPropertyCreateFormData = async (payload) => {
   const formData = new FormData();
 
   const appendIfPresent = (key, value) => {
@@ -25,25 +37,31 @@ const buildPropertyCreateFormData = (payload) => {
     formData.append("features", payload.features.join(","));
   }
 
-  if (Array.isArray(payload.images)) {
-    payload.images.forEach((image, index) => {
-      if (!image?.uri) return;
+  // Async: convert image URIs to blobs before appending to FormData
+  if (Array.isArray(payload.images) && payload.images.length > 0) {
+    for (let i = 0; i < payload.images.length; i++) {
+      const image = payload.images[i];
+      if (!image?.uri) continue;
 
-      const extension = image.uri.split(".").pop() || "jpg";
-      const fallbackName = `property-image-${Date.now()}-${index}.${extension}`;
+      try {
+        const blob = await uriToBlob(image.uri);
+        const extension = image.uri.split(".").pop() || "jpg";
+        const fallbackName = `property-image-${Date.now()}-${i}.${extension}`;
+        const fileName = image.fileName || fallbackName;
 
-      formData.append("images", {
-        uri: image.uri,
-        name: image.fileName || fallbackName,
-        type: image.mimeType || "image/jpeg"
-      });
-    });
+        // Append blob directly with proper metadata
+        formData.append("images", blob, fileName);
+      } catch (error) {
+        console.error(`Failed to process image ${i}:`, error);
+        throw error;
+      }
+    }
   }
 
   return formData;
 };
 
-const buildPropertyUpdateFormData = (payload) => {
+const buildPropertyUpdateFormData = async (payload) => {
   const formData = new FormData();
 
   const appendIfPresent = (key, value) => {
@@ -79,19 +97,25 @@ const buildPropertyUpdateFormData = (payload) => {
     formData.append("replaceImages", payload.replaceImages ? "true" : "false");
   }
 
-  if (Array.isArray(payload.images)) {
-    payload.images.forEach((image, index) => {
-      if (!image?.uri) return;
+  // Async: convert image URIs to blobs before appending to FormData
+  if (Array.isArray(payload.images) && payload.images.length > 0) {
+    for (let i = 0; i < payload.images.length; i++) {
+      const image = payload.images[i];
+      if (!image?.uri) continue;
 
-      const extension = image.uri.split(".").pop() || "jpg";
-      const fallbackName = `property-image-${Date.now()}-${index}.${extension}`;
+      try {
+        const blob = await uriToBlob(image.uri);
+        const extension = image.uri.split(".").pop() || "jpg";
+        const fallbackName = `property-image-${Date.now()}-${i}.${extension}`;
+        const fileName = image.fileName || fallbackName;
 
-      formData.append("images", {
-        uri: image.uri,
-        name: image.fileName || fallbackName,
-        type: image.mimeType || "image/jpeg"
-      });
-    });
+        // Append blob directly with proper metadata
+        formData.append("images", blob, fileName);
+      } catch (error) {
+        console.error(`Failed to process image ${i}:`, error);
+        throw error;
+      }
+    }
   }
 
   return formData;
@@ -116,12 +140,9 @@ export async function createProperty(payload) {
   const hasImages = Array.isArray(payload?.images) && payload.images.length > 0;
 
   if (hasImages) {
-    const formData = buildPropertyCreateFormData(payload);
-    const response = await apiClient.post("/properties", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data"
-      }
-    });
+    const formData = await buildPropertyCreateFormData(payload);
+    // Don't explicitly set Content-Type; let axios auto-set it with correct boundary
+    const response = await apiClient.post("/properties", formData);
     return response.data?.data;
   }
 
@@ -135,12 +156,9 @@ export async function updateProperty(id, payload) {
   const hasReplaceFlag = payload?.replaceImages !== undefined;
 
   if (hasImages || hasImageRemoval || hasReplaceFlag) {
-    const formData = buildPropertyUpdateFormData(payload);
-    const response = await apiClient.patch(`/properties/${id}`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data"
-      }
-    });
+    const formData = await buildPropertyUpdateFormData(payload);
+    // Don't explicitly set Content-Type; let axios auto-set it with correct boundary
+    const response = await apiClient.patch(`/properties/${id}`, formData);
     return response.data?.data;
   }
 

@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { favoriteApi } from "../api/favoriteApi";
 import { estavaCore } from "../theme/estavaCore";
 import { AppFooter } from "../components/AppChrome";
+import { normalizeImageUrl } from "../utils/imageUrl";
 
 const MAX_NOTE_LENGTH = 500;
 
@@ -188,7 +189,7 @@ export default function FavoritesScreen({ navigation }) {
                 accessibilityLabel={property?.title || "Property"}
               >
                 {Array.isArray(property?.imageUrls) && property.imageUrls[0] ? (
-                  <Image source={{ uri: property.imageUrls[0] }} style={styles.cardImage} />
+                  <Image source={{ uri: normalizeImageUrl(property.imageUrls[0]) }} style={styles.cardImage} />
                 ) : (
                   <View style={styles.cardImagePlaceholder}>
                     <Text style={styles.cardImagePlaceholderText}>No image</Text>
@@ -233,6 +234,7 @@ export default function FavoritesScreen({ navigation }) {
                       <TextInput
                         style={styles.noteInput}
                         placeholder="Add a note for this favorite"
+                        placeholderTextColor={estavaCore.colors.textSecondary}
                         multiline
                         numberOfLines={3}
                         maxLength={MAX_NOTE_LENGTH}
