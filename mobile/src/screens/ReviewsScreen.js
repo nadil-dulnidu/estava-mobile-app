@@ -377,14 +377,16 @@ export default function ReviewsScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: estavaCore.colors.background },
+  container: { flex: 1, padding: 18, backgroundColor: estavaCore.colors.background },
   title: { fontSize: 24, fontWeight: "700", marginBottom: 4, color: estavaCore.colors.primary },
   subtitle: { color: estavaCore.colors.textSecondary, marginBottom: 14 },
   error: { color: estavaCore.colors.danger, marginBottom: 8 },
   emptyText: { textAlign: "center", color: estavaCore.colors.textSecondary, marginTop: 20 },
   addButton: {
     backgroundColor: estavaCore.colors.primary,
-    borderRadius: 8,
+    borderRadius: 10,
+    minHeight: 48,
+    justifyContent: "center",
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginBottom: 16
@@ -392,8 +394,8 @@ const styles = StyleSheet.create({
   addButtonText: { color: "#fff", fontWeight: "700", textAlign: "center" },
   card: {
     backgroundColor: estavaCore.colors.surface,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 12,
+    padding: 14,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: estavaCore.colors.border,
@@ -403,13 +405,13 @@ const styles = StyleSheet.create({
   starsRow: { flexDirection: "row", gap: 4, marginTop: 6 },
   comment: { fontSize: 14, color: estavaCore.colors.textSecondary, marginTop: 6 },
   date: { fontSize: 12, color: estavaCore.colors.textSecondary, marginTop: 6 },
-  cardActions: { marginTop: 8, flexDirection: "row", gap: 14 },
-  editButton: { paddingVertical: 2, paddingHorizontal: 2 },
+  cardActions: { marginTop: 10, flexDirection: "row", gap: 8 },
+  editButton: { minHeight: 36, paddingHorizontal: 10, borderRadius: 8, justifyContent: "center", backgroundColor: estavaCore.colors.accentSoft },
   editButtonText: { color: estavaCore.colors.accent, fontWeight: "700", fontSize: 12 },
-  deleteButton: { paddingVertical: 2, paddingHorizontal: 2 },
+  deleteButton: { minHeight: 36, paddingHorizontal: 10, borderRadius: 8, justifyContent: "center", backgroundColor: estavaCore.colors.dangerSoft },
   deleteButtonText: { color: estavaCore.colors.danger, fontWeight: "700", fontSize: 12 },
   modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.3)" },
-  modalContent: { backgroundColor: estavaCore.colors.surface, padding: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16, maxHeight: "85%" },
+  modalContent: { backgroundColor: estavaCore.colors.surface, padding: 18, borderTopLeftRadius: 16, borderTopRightRadius: 16, maxHeight: "85%" },
   modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12, color: estavaCore.colors.primary },
   propertyList: { height: 250, marginBottom: 12, borderWidth: 1, borderColor: estavaCore.colors.border, borderRadius: 8 },
   propertyItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: estavaCore.colors.border },
@@ -419,11 +421,11 @@ const styles = StyleSheet.create({
   ratingContainer: { flexDirection: "row", justifyContent: "space-around", marginBottom: 12 },
   starButton: { padding: 8 },
   starSelected: { transform: [{ scale: 1.2 }] },
-  modalInput: { borderWidth: 1, borderColor: estavaCore.colors.border, borderRadius: 8, padding: 10, marginBottom: 12, backgroundColor: estavaCore.colors.surface },
-  modalButtons: { flexDirection: "row", justifyContent: "space-around" },
-  cancelBtn: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, backgroundColor: estavaCore.colors.surfaceMuted },
+  modalInput: { borderWidth: 1, borderColor: estavaCore.colors.border, borderRadius: 10, padding: 12, marginBottom: 12, backgroundColor: estavaCore.colors.surface },
+  modalButtons: { flexDirection: "row", gap: 10 },
+  cancelBtn: { flex: 1, minHeight: 44, borderRadius: 10, backgroundColor: estavaCore.colors.surfaceMuted, alignItems: "center", justifyContent: "center" },
   cancelText: { color: estavaCore.colors.textPrimary, fontWeight: "600" },
-  submitBtn: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, backgroundColor: estavaCore.colors.primary },
+  submitBtn: { flex: 1, minHeight: 44, borderRadius: 10, backgroundColor: estavaCore.colors.primary, alignItems: "center", justifyContent: "center" },
   submitBtnDisabled: { opacity: 0.5 },
   submitText: { color: "#fff", fontWeight: "600" }
 });

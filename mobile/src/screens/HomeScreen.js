@@ -99,7 +99,7 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
-      <QuickAccessMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <QuickAccessMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} user={user} />
       <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: insets.top + 12 }]}>
         <View style={styles.header}>
           <View style={styles.headerLeft}>
@@ -114,7 +114,6 @@ export default function HomeScreen({ navigation }) {
             menuOpen={menuVisible}
           />
         </View>
-
         {!!error && <Text style={styles.errorText}>{error}</Text>}
 
         <View style={styles.sectionHead}>

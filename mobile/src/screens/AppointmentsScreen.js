@@ -441,14 +441,16 @@ export default function AppointmentsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: estavaCore.colors.background },
+  container: { flex: 1, padding: 18, backgroundColor: estavaCore.colors.background },
   title: { fontSize: 24, fontWeight: "700", marginBottom: 4, color: estavaCore.colors.primary },
   subtitle: { color: estavaCore.colors.textSecondary, marginBottom: 14 },
   error: { color: estavaCore.colors.danger, marginBottom: 8 },
   emptyText: { textAlign: "center", color: estavaCore.colors.textSecondary, marginTop: 20 },
   bookButton: {
     backgroundColor: estavaCore.colors.primary,
-    borderRadius: 8,
+    borderRadius: 10,
+    minHeight: 48,
+    justifyContent: "center",
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginBottom: 16
@@ -456,8 +458,8 @@ const styles = StyleSheet.create({
   bookButtonText: { color: "#fff", fontWeight: "700", textAlign: "center" },
   card: {
     backgroundColor: estavaCore.colors.surface,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 12,
+    padding: 14,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: estavaCore.colors.border,
@@ -474,10 +476,11 @@ const styles = StyleSheet.create({
   },
   editButton: {
     flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
+    minHeight: 44,
+    borderRadius: 10,
     backgroundColor: estavaCore.colors.accentSoft,
-    alignItems: "center"
+    alignItems: "center",
+    justifyContent: "center"
   },
   editButtonText: {
     color: estavaCore.colors.accent,
@@ -485,26 +488,29 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
+    minHeight: 44,
+    borderRadius: 10,
     backgroundColor: estavaCore.colors.dangerSoft,
-    alignItems: "center"
+    alignItems: "center",
+    justifyContent: "center"
   },
   cancelText: { color: estavaCore.colors.danger, fontWeight: "700" },
   hideButton: {
     flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
+    minHeight: 44,
+    borderRadius: 10,
     backgroundColor: estavaCore.colors.warningSoft,
-    alignItems: "center"
+    alignItems: "center",
+    justifyContent: "center"
   },
   hideText: { color: estavaCore.colors.warning, fontWeight: "700" },
   deleteButton: {
     flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
+    minHeight: 44,
+    borderRadius: 10,
     backgroundColor: estavaCore.colors.dangerSoft,
-    alignItems: "center"
+    alignItems: "center",
+    justifyContent: "center"
   },
   deleteText: { color: estavaCore.colors.danger, fontWeight: "700" },
   noteText: {
@@ -521,7 +527,7 @@ const styles = StyleSheet.create({
     backgroundColor: estavaCore.colors.surface,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    padding: 16
+    padding: 18
   },
   modalTitle: {
     fontSize: 18,
@@ -532,8 +538,8 @@ const styles = StyleSheet.create({
   pickerButton: {
     borderWidth: 1,
     borderColor: estavaCore.colors.border,
-    borderRadius: 8,
-    padding: 10,
+    borderRadius: 10,
+    padding: 12,
     marginBottom: 10,
     backgroundColor: estavaCore.colors.surface
   },
@@ -574,10 +580,11 @@ const styles = StyleSheet.create({
   },
   modalCancelButton: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
+    minHeight: 44,
+    borderRadius: 10,
     backgroundColor: estavaCore.colors.surfaceMuted,
-    alignItems: "center"
+    alignItems: "center",
+    justifyContent: "center"
   },
   modalCancelText: {
     color: estavaCore.colors.textPrimary,
@@ -585,10 +592,11 @@ const styles = StyleSheet.create({
   },
   modalSaveButton: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
+    minHeight: 44,
+    borderRadius: 10,
     backgroundColor: estavaCore.colors.primary,
-    alignItems: "center"
+    alignItems: "center",
+    justifyContent: "center"
   },
   modalSaveText: {
     color: "#fff",

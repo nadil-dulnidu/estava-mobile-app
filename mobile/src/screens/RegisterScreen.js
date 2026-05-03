@@ -1,11 +1,13 @@
 // Screen component for user-facing workflow in the real-estate mobile app.
 import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, View, Text, TextInput, Pressable, StyleSheet } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../context/AuthContext";
 import { estavaCore } from "../theme/estavaCore";
 
 export default function RegisterScreen({ navigation }) {
   const { register, loading } = useAuth();
+  const insets = useSafeAreaInsets();
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -37,48 +39,72 @@ export default function RegisterScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.kicker}>Estava Real Estate</Text>
-      <Text style={styles.title}>Create account</Text>
-      <Text style={styles.subtitle}>Register to save favorites and manage appointments.</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Full Name"
-        value={fullName}
-        onChangeText={setFullName}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        autoCapitalize="none"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-      {!!error && <Text style={styles.error}>{error}</Text>}
-      <Pressable style={styles.button} onPress={onSubmit} disabled={loading}>
-        <Text style={styles.buttonText}>{loading ? "Please wait..." : "Register"}</Text>
-      </Pressable>
-      <Pressable onPress={() => navigation.goBack()}>
-        <Text style={styles.link}>Already have an account? Login</Text>
-      </Pressable>
-    </View>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={[
+          styles.content,
+          { paddingTop: insets.top + 28, paddingBottom: insets.bottom + 28 }
+        ]}
+      >
+        <View style={styles.authCard}>
+          <Text style={styles.kicker}>Estava Real Estate</Text>
+          <Text style={styles.title}>Create account</Text>
+          <Text style={styles.subtitle}>Register to save favorites and manage appointments.</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Full Name"
+            value={fullName}
+            onChangeText={setFullName}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            autoCapitalize="none"
+            keyboardType="email-address"
+            value={email}
+            onChangeText={setEmail}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Password"
+            secureTextEntry
+            value={password}
+            onChangeText={setPassword}
+          />
+          {!!error && <Text style={styles.error}>{error}</Text>}
+          <Pressable style={[styles.button, loading && styles.buttonDisabled]} onPress={onSubmit} disabled={loading}>
+            <Text style={styles.buttonText}>{loading ? "Please wait..." : "Register"}</Text>
+          </Pressable>
+          <Pressable onPress={() => navigation.goBack()}>
+            <Text style={styles.link}>Already have an account? Login</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    padding: 20,
     backgroundColor: estavaCore.colors.background
+  },
+  content: {
+    flexGrow: 1,
+    justifyContent: "center",
+    paddingHorizontal: 20
+  },
+  authCard: {
+    backgroundColor: estavaCore.colors.surface,
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
+    borderRadius: 16,
+    padding: 18,
+    ...estavaCore.shadow.card
   },
   kicker: {
     color: estavaCore.colors.accent,
@@ -101,18 +127,23 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: estavaCore.colors.surface,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    minHeight: 48,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: estavaCore.colors.border
   },
   button: {
     backgroundColor: estavaCore.colors.primary,
-    borderRadius: 8,
-    padding: 14,
+    borderRadius: 10,
+    minHeight: 48,
     marginTop: 8,
-    alignItems: "center"
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  buttonDisabled: {
+    opacity: 0.65
   },
   buttonText: {
     color: "#ffffff",
@@ -123,8 +154,9 @@ const styles = StyleSheet.create({
     marginBottom: 8
   },
   link: {
-    marginTop: 14,
+    marginTop: 16,
     color: estavaCore.colors.accent,
-    textAlign: "center"
+    textAlign: "center",
+    fontWeight: "700"
   }
 });

@@ -11,13 +11,20 @@ import {
   RefreshControl,
   ScrollView,
   Image,
+  TextInput,
   PanResponder,
-  Animated,
+  Animated
 } from "react-native";
 import { getMyProperties, getProperties } from "../api/propertyApi";
 import { useAuth } from "../context/AuthContext";
 import { estavaCore } from "../theme/estavaCore";
 import { AppFooter, HeaderActions, QuickAccessMenu } from "../components/AppChrome";
+import {
+  PROPERTY_TYPE_FILTER_OPTIONS,
+  formatAreaSize,
+  getPropertyTypeLabel,
+  hasRooms
+} from "../utils/propertyDisplay";
 
 const resolveUserId = (entity) => {
   if (!entity) return "";
@@ -43,6 +50,7 @@ const THUMB_SIZE = 24;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 const formatCurrency = (value) => `LKR ${Number(value || 0).toLocaleString()}`;
+const normalizeSearchableText = (value) => String(value || "").trim().toLowerCase();
 
 const inSelectedPriceRange = (rawPrice, minPrice, maxPrice) => {
   const price = Number(rawPrice || 0);
@@ -183,6 +191,7 @@ export default function PropertyListScreen({ navigation, route }) {
   const [appliedPriceMin, setAppliedPriceMin] = useState(PRICE_MIN);
   const [appliedPriceMax, setAppliedPriceMax] = useState(DEFAULT_PRICE_MAX);
   const [selectedType, setSelectedType] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [menuVisible, setMenuVisible] = useState(false);
 
   const currentUserId = resolveUserId(user);
@@ -203,14 +212,7 @@ export default function PropertyListScreen({ navigation, route }) {
     setAppliedPriceMax((current) => (current === DEFAULT_PRICE_MAX ? availablePriceMax : clamp(current, PRICE_MIN + PRICE_STEP, availablePriceMax)));
   }, [availablePriceMax]);
 
-  const propertyTypes = [
-    { label: "All Types", value: "all" },
-    { label: "House", value: "House" },
-    { label: "Apartment", value: "Apartment" },
-    { label: "Condo", value: "Condo" },
-    { label: "Land", value: "Land" },
-    { label: "Commercial", value: "Commercial" }
-  ];
+  const propertyTypes = PROPERTY_TYPE_FILTER_OPTIONS;
 
   const fetchProperties = useCallback(
     async (isRefresh = false) => {
@@ -279,8 +281,30 @@ export default function PropertyListScreen({ navigation, route }) {
       });
     }
 
+    const normalizedSearchQuery = normalizeSearchableText(searchQuery);
+    if (normalizedSearchQuery) {
+      filteredItems = filteredItems.filter((item) => {
+        const searchableText = [
+          item?.title,
+          item?.location,
+          item?.propertyType,
+          item?.listingStatus
+        ]
+          .map(normalizeSearchableText)
+          .join(" ");
+
+        return searchableText.includes(normalizedSearchQuery);
+      });
+    }
+
     return filteredItems;
-  }, [appliedPriceMax, appliedPriceMin, currentUserId, rawItems, selectedType]);
+  }, [appliedPriceMax, appliedPriceMin, currentUserId, rawItems, searchQuery, selectedType]);
+
+  const activeFilterCount = [
+    appliedPriceMin !== PRICE_MIN || appliedPriceMax !== availablePriceMax,
+    selectedType !== "all",
+    normalizeSearchableText(searchQuery).length > 0
+  ].filter(Boolean).length;
 
   const openPriceFilter = () => {
     setDraftPriceMin(appliedPriceMin);
@@ -303,46 +327,56 @@ export default function PropertyListScreen({ navigation, route }) {
     setAppliedPriceMin(PRICE_MIN);
     setAppliedPriceMax(availablePriceMax);
     setSelectedType("all");
+    setSearchQuery("");
   };
 
   const renderItem = ({ item }) => {
     const ownerId = resolveUserId(item?.createdBy);
     const isOwnerItem = mineMode || (currentUserId && String(ownerId) === String(currentUserId));
+    const roomSummary = hasRooms(item?.propertyType)
+      ? [item?.bedrooms != null ? `${item.bedrooms} bed` : "", item?.bathrooms != null ? `${item.bathrooms} bath` : ""]
+          .filter(Boolean)
+          .join(" · ")
+      : "";
 
     return (
-    <Pressable
-      style={styles.card}
-      onPress={() => navigation.navigate("PropertyDetail", { propertyId: item._id })}
-      accessibilityRole="button"
-      accessibilityLabel={item.title}
-    >
-      {Array.isArray(item?.imageUrls) && item.imageUrls[0] ? (
-        <Image source={{ uri: item.imageUrls[0] }} style={styles.cardImage} />
-      ) : (
-        <View style={styles.cardImagePlaceholder}>
-          <Text style={styles.cardImagePlaceholderText}>No image</Text>
-        </View>
-      )}
-      <View style={styles.cardContent}>
-        <Text style={styles.title}>{item.title}</Text>
-        <Text style={styles.location}>{item.location}</Text>
-        <View style={styles.cardFooter}>
-          <Text style={styles.price}>{formatCurrency(item.price)}</Text>
-          <View style={styles.metaChips}>
-            <Text style={styles.type}>{item.propertyType || "Property"}</Text>
-            <Text style={styles.statusChip}>{String(item?.listingStatus || "available")}</Text>
+      <Pressable
+        style={styles.card}
+        onPress={() => navigation.navigate("PropertyDetail", { propertyId: item._id })}
+        accessibilityRole="button"
+        accessibilityLabel={item.title}
+      >
+        {Array.isArray(item?.imageUrls) && item.imageUrls[0] ? (
+          <Image source={{ uri: item.imageUrls[0] }} style={styles.cardImage} />
+        ) : (
+          <View style={styles.cardImagePlaceholder}>
+            <Text style={styles.cardImagePlaceholderText}>No image</Text>
           </View>
+        )}
+        <View style={styles.cardContent}>
+          <Text style={styles.title}>{item.title}</Text>
+          <Text style={styles.location} numberOfLines={1}>{item.location}</Text>
+          <View style={styles.cardFooter}>
+            <Text style={styles.price}>{formatCurrency(item.price)}</Text>
+            <View style={styles.cardTagRow}>
+              <Text style={styles.type}>{getPropertyTypeLabel(item.propertyType)}</Text>
+              <Text style={styles.statusChip}>{String(item?.listingStatus || "available")}</Text>
+            </View>
+          </View>
+          <View style={styles.propertyMetaRow}>
+            {roomSummary ? <Text style={styles.metaText}>{roomSummary}</Text> : null}
+            <Text style={styles.metaText}>Area: {formatAreaSize(item?.areaSize)}</Text>
+          </View>
+          {isOwnerItem ? (
+            <Pressable
+              style={styles.editButton}
+              onPress={() => navigation.navigate("EditProperty", { propertyId: item._id })}
+            >
+              <Text style={styles.editButtonText}>Edit</Text>
+            </Pressable>
+          ) : null}
         </View>
-        {isOwnerItem ? (
-          <Pressable
-            style={styles.editButton}
-            onPress={() => navigation.navigate("EditProperty", { propertyId: item._id })}
-          >
-            <Text style={styles.editButtonText}>Edit</Text>
-          </Pressable>
-        ) : null}
-      </View>
-    </Pressable>
+      </Pressable>
     );
   };
 
@@ -353,10 +387,12 @@ export default function PropertyListScreen({ navigation, route }) {
         onPress={() => navigation.navigate("CreateProperty")}
         accessibilityRole="button"
       >
-        <Text style={styles.primaryActionText}>Post Property</Text>
+        <Text style={styles.primaryActionText}>+ Create Property</Text>
       </Pressable>
     </View>
   );
+
+  const canPostProperty = Boolean(user);
 
   if (loading && !refreshing) {
     return (
@@ -368,7 +404,7 @@ export default function PropertyListScreen({ navigation, route }) {
 
   return (
     <View style={styles.container}>
-      <QuickAccessMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <QuickAccessMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} user={user} />
 
       <View style={[styles.pageHeader, { paddingTop: insets.top + 12 }] }>
         <View style={styles.pageHeaderText}>
@@ -385,6 +421,27 @@ export default function PropertyListScreen({ navigation, route }) {
           onMenuPress={() => setMenuVisible((current) => !current)}
           menuOpen={menuVisible}
         />
+      </View>
+
+      <View style={styles.searchCard}>
+        <Text style={styles.searchLabel}>{mineMode ? "Find your listing" : "Search listings"}</Text>
+        <TextInput
+          style={styles.searchInput}
+          placeholder={mineMode ? "Search by title, location, or type" : "Search by title, location, type, or status"}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="search"
+        />
+        <View style={styles.searchMetaRow}>
+          <Text style={styles.searchMetaText}>
+            {visibleItems.length} result{visibleItems.length === 1 ? "" : "s"}
+          </Text>
+          <Text style={styles.searchMetaText}>
+            {activeFilterCount} active filter{activeFilterCount === 1 ? "" : "s"}
+          </Text>
+        </View>
       </View>
 
       <View style={styles.filtersContainer}>
@@ -483,7 +540,7 @@ export default function PropertyListScreen({ navigation, route }) {
         </View>
       )}
 
-      {(appliedPriceMin !== PRICE_MIN || appliedPriceMax !== availablePriceMax || selectedType !== "all") && (
+      {activeFilterCount > 0 && (
         <View style={styles.activeFilterRow}>
           <Text style={styles.activeFilterLabel}>Active filters</Text>
           <Pressable
@@ -497,44 +554,77 @@ export default function PropertyListScreen({ navigation, route }) {
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <View style={styles.topActionRow}>
-        <Pressable
-          style={[
-            styles.topActionButton,
-            styles.secondaryActionButton,
-            !isMainList && styles.topActionButtonActive,
-            !isMainList && styles.secondaryActionButtonActive
-          ]}
-          onPress={() => navigation.navigate("PropertyList", { viewMode: "mine" })}
-          accessibilityRole="button"
-        >
-          <Text style={[styles.secondaryActionText, !isMainList && styles.secondaryActionTextActive]}>
-            My Properties
-          </Text>
-        </Pressable>
-        <Pressable
-          style={[
-            styles.topActionButton,
-            styles.secondaryActionButton,
-            isMainList && styles.topActionButtonActive,
-            isMainList && styles.secondaryActionButtonActive
-          ]}
-          onPress={() => navigation.navigate("PropertyList", { viewMode: "all" })}
-          accessibilityRole="button"
-        >
-          <Text style={[styles.secondaryActionText, isMainList && styles.secondaryActionTextActive]}>
-            All Properties
-          </Text>
-        </Pressable>
+      <View style={styles.actionSection}>
+        <View style={styles.topActionRow}>
+          <Pressable
+            style={[
+              styles.topActionButton,
+              styles.secondaryActionButton,
+              !isMainList && styles.topActionButtonActive,
+              !isMainList && styles.secondaryActionButtonActive
+            ]}
+            onPress={() => navigation.navigate("PropertyList", { viewMode: "mine" })}
+            accessibilityRole="button"
+          >
+            <Text style={[styles.secondaryActionText, !isMainList && styles.secondaryActionTextActive]}>
+              My Properties
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[
+              styles.topActionButton,
+              styles.secondaryActionButton,
+              isMainList && styles.topActionButtonActive,
+              isMainList && styles.secondaryActionButtonActive
+            ]}
+            onPress={() => navigation.navigate("PropertyList", { viewMode: "all" })}
+            accessibilityRole="button"
+          >
+            <Text style={[styles.secondaryActionText, isMainList && styles.secondaryActionTextActive]}>
+              All Properties
+            </Text>
+          </Pressable>
+        </View>
+        {canPostProperty && mineMode ? renderPostPropertyAction() : null}
       </View>
 
       <FlatList
         data={visibleItems}
         keyExtractor={(item) => item._id}
         contentContainerStyle={styles.listContent}
-        ListHeaderComponent={renderPostPropertyAction}
         renderItem={renderItem}
-        ListEmptyComponent={<Text style={styles.empty}>No properties match your filters.</Text>}
+        ListEmptyComponent={
+          <View style={styles.emptyStateCard}>
+            <Text style={styles.emptyStateTitle}>
+              {mineMode ? "No properties to show" : "No matching properties"}
+            </Text>
+            <Text style={styles.emptyStateText}>
+              {activeFilterCount > 0
+                ? "Try clearing filters or broadening your search to see more results."
+                : mineMode
+                  ? "Create your first listing to manage it here."
+                  : "Pull to refresh or try again in a moment."}
+            </Text>
+            <View style={styles.emptyStateActions}>
+              {activeFilterCount > 0 ? (
+                <Pressable style={styles.emptyActionPrimary} onPress={clearAllFilters}>
+                  <Text style={styles.emptyActionPrimaryText}>Clear filters</Text>
+                </Pressable>
+              ) : null}
+              <Pressable style={styles.emptyActionSecondary} onPress={() => fetchProperties(true)}>
+                <Text style={styles.emptyActionSecondaryText}>Refresh</Text>
+              </Pressable>
+              {canPostProperty && mineMode ? (
+                <Pressable
+                  style={styles.emptyActionSecondary}
+                  onPress={() => navigation.navigate("CreateProperty")}
+                >
+                  <Text style={styles.emptyActionSecondaryText}>Post property</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          </View>
+        }
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => fetchProperties(true)} />
         }
@@ -582,6 +672,41 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     color: estavaCore.colors.textSecondary
+  },
+  searchCard: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 14,
+    borderRadius: 14,
+    backgroundColor: estavaCore.colors.surface,
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
+    ...estavaCore.shadow.card
+  },
+  searchLabel: {
+    color: estavaCore.colors.primary,
+    fontWeight: "700",
+    marginBottom: 8
+  },
+  searchInput: {
+    minHeight: 46,
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    backgroundColor: estavaCore.colors.background,
+    color: estavaCore.colors.textPrimary
+  },
+  searchMetaRow: {
+    marginTop: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 8
+  },
+  searchMetaText: {
+    color: estavaCore.colors.textSecondary,
+    fontSize: 12,
+    fontWeight: "600"
   },
   filtersContainer: {
     flexDirection: "row",
@@ -797,21 +922,24 @@ const styles = StyleSheet.create({
     fontSize: 13
   },
   postActionWrap: {
-    marginBottom: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 8,
+    paddingBottom: 20,
+    backgroundColor: estavaCore.colors.surface
+  },
+  actionSection: {
     backgroundColor: estavaCore.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: estavaCore.colors.border
+    borderBottomColor: estavaCore.colors.border,
+    marginBottom: 16
   },
   topActionRow: {
     flexDirection: "row",
     gap: 8,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: estavaCore.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: estavaCore.colors.border
+    paddingTop: 12,
+    paddingBottom: 8,
+    backgroundColor: estavaCore.colors.surface
   },
   topActionButton: {
     flex: 1,
@@ -824,15 +952,17 @@ const styles = StyleSheet.create({
     borderWidth: 1
   },
   primaryActionButton: {
-    backgroundColor: estavaCore.colors.primary
-  },
-  primaryActionButtonActive: {
-    backgroundColor: estavaCore.colors.primary
+    minHeight: 52,
+    borderRadius: 999,
+    backgroundColor: estavaCore.colors.accent,
+    alignItems: "center",
+    justifyContent: "center"
   },
   primaryActionText: {
     color: "#ffffff",
-    fontWeight: "700",
-    fontSize: 14
+    fontWeight: "800",
+    fontSize: 16,
+    textAlign: "center"
   },
   secondaryActionButton: {
     backgroundColor: estavaCore.colors.surfaceMuted,
@@ -854,8 +984,9 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12
+    paddingTop: 0,
+    paddingBottom: 104,
+    gap: 14,
   },
   card: {
     backgroundColor: estavaCore.colors.surface,
@@ -885,31 +1016,45 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 14
   },
+  cardFooter: {
+    marginTop: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: estavaCore.colors.border
+  },
   title: {
+    marginTop: 8,
     fontSize: 16,
     fontWeight: "700",
     color: estavaCore.colors.primary
   },
   location: {
-    marginTop: 4,
     fontSize: 13,
     color: estavaCore.colors.textSecondary
   },
-  cardFooter: {
+  cardTagRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopColor: estavaCore.colors.border,
-    borderTopWidth: 1
+    marginBottom: 10
   },
-  metaChips: {
+  propertyMetaRow: {
     flexDirection: "row",
-    gap: 6
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 8
+  },
+  metaText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: estavaCore.colors.textSecondary
   },
   price: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "700",
     color: estavaCore.colors.accent
   },
@@ -936,5 +1081,48 @@ const styles = StyleSheet.create({
     marginTop: 32,
     fontSize: 16,
     color: "#6b7280"
+  },
+  emptyStateCard: {
+    marginTop: 20,
+    padding: 16,
+    borderRadius: 14,
+    backgroundColor: estavaCore.colors.surface,
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
+    gap: 12
+  },
+  emptyStateTitle: {
+    color: estavaCore.colors.primary,
+    fontSize: 16,
+    fontWeight: "700"
+  },
+  emptyStateText: {
+    color: estavaCore.colors.textSecondary,
+    lineHeight: 20
+  },
+  emptyStateActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8
+  },
+  emptyActionPrimary: {
+    backgroundColor: estavaCore.colors.accent,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10
+  },
+  emptyActionPrimaryText: {
+    color: "#ffffff",
+    fontWeight: "700"
+  },
+  emptyActionSecondary: {
+    backgroundColor: estavaCore.colors.surfaceMuted,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10
+  },
+  emptyActionSecondaryText: {
+    color: estavaCore.colors.primary,
+    fontWeight: "700"
   }
 });
