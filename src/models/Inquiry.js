@@ -1,0 +1,86 @@
+// Data model for inquiry/contact messages between buyers and sellers.
+const mongoose = require("mongoose");
+
+const inquirySchema = new mongoose.Schema(
+  {
+    propertyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Property",
+      required: true,
+      index: true
+    },
+    senderUserId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true
+    },
+    agentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true
+    },
+    subject: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 160
+    },
+    message: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 3000
+    },
+    contactNumber: {
+      type: String,
+      trim: true,
+      maxlength: 40
+    },
+    inquiryStatus: {
+      type: String,
+      enum: ["pending", "replied", "closed"],
+      default: "pending",
+      index: true
+    },
+    responseMessage: {
+      type: String,
+      trim: true,
+      maxlength: 3000,
+      default: ""
+    },
+    respondedAt: {
+      type: Date,
+      default: null
+    },
+    senderSoftDeleted: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+    agentSoftDeleted: {
+      type: Boolean,
+      default: false,
+      index: true
+    }
+  },
+  {
+    timestamps: true
+  }
+);
+
+inquirySchema.methods.hasResponse = function hasResponse() {
+  return Boolean(this.responseMessage && this.responseMessage.trim().length > 0);
+};
+
+inquirySchema.methods.clearResponse = function clearResponse() {
+  this.responseMessage = "";
+  this.respondedAt = null;
+
+  if (this.inquiryStatus === "replied") {
+    this.inquiryStatus = "pending";
+  }
+};
+
+module.exports = mongoose.model("Inquiry", inquirySchema);

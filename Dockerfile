@@ -1,19 +1,11 @@
-FROM node:20-bookworm-slim
+FROM node:20-alpine
 
 WORKDIR /app
 
-# Ensure TLS trust store exists for MongoDB Atlas connections.
-RUN apt-get update \
-	&& apt-get install -y --no-install-recommends ca-certificates \
-	&& rm -rf /var/lib/apt/lists/*
+COPY package*.json ./
+RUN npm install --omit=dev
 
-# Copy backend only
-COPY backend/package*.json ./
-
-RUN npm install
-
-COPY backend/ .
+COPY . .
 
 EXPOSE 5000
-
-CMD ["node", "src/server.js"]
+CMD ["npm", "start"]
