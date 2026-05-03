@@ -1,0 +1,431 @@
+// Reviews screen for viewing and submitting property and agent reviews
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  ActivityIndicator,
+  Modal,
+  TextInput,
+  ScrollView,
+  Alert
+} from "react-native";
+import { reviewApi } from "../api/reviewApi";
+import { getProperties } from "../api/propertyApi";
+import { estavaCore } from "../theme/estavaCore";
+import { StarIcon } from "../components/AppIcons";
+
+export default function ReviewsScreen({ route, navigation }) {
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [submitError, setSubmitError] = useState("");
+  const [modalVisible, setModalVisible] = useState(false);
+  const [propertySelectMode, setPropertySelectMode] = useState(false);
+  const [properties, setProperties] = useState([]);
+  const [selectedProperty, setSelectedProperty] = useState(null);
+  const [rating, setRating] = useState("5");
+  const [comment, setComment] = useState("");
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingReview, setEditingReview] = useState(null);
+  const [editRating, setEditRating] = useState("5");
+  const [editComment, setEditComment] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const preselectedProperty = route?.params?.preselectedProperty;
+
+  useEffect(() => {
+    loadReviews();
+    loadProperties();
+  }, []);
+
+  useEffect(() => {
+    if (!preselectedProperty?._id) {
+      return;
+    }
+
+    setSelectedProperty({
+      _id: preselectedProperty._id,
+      title: preselectedProperty.title || "Selected Property",
+      price: Number(preselectedProperty.price || 0)
+    });
+    setModalVisible(true);
+    setPropertySelectMode(true);
+    setRating("5");
+    setComment("");
+    setSubmitError("");
+    navigation.setParams({ preselectedProperty: undefined });
+  }, [navigation, preselectedProperty]);
+
+  const loadReviews = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await reviewApi.getMyReviews();
+      setReviews(res.data.data || []);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || "Failed to load reviews");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadProperties = async () => {
+    try {
+      const result = await getProperties();
+      setProperties(result?.items || []);
+    } catch (err) {
+      console.log("Failed to load properties:", err.message);
+      setProperties([]);
+    }
+  };
+
+  const onSubmitReview = async () => {
+    setSubmitError("");
+
+    if (!selectedProperty) {
+      setSubmitError("Please select a property");
+      return;
+    }
+    if (!comment.trim()) {
+      setSubmitError("Comment cannot be empty");
+      return;
+    }
+
+    try {
+      await reviewApi.submitReview({
+        propertyId: selectedProperty._id,
+        rating: parseInt(rating, 10),
+        comment
+      });
+      setModalVisible(false);
+      setPropertySelectMode(false);
+      setRating("5");
+      setComment("");
+      setSelectedProperty(null);
+      setSubmitError("");
+      loadReviews();
+    } catch (err) {
+      setSubmitError(err.response?.data?.message || "Failed to submit review");
+    }
+  };
+
+  const onOpenEditReview = (review) => {
+    setEditingReview(review);
+    setEditRating(String(review?.rating || 5));
+    setEditComment(review?.comment || "");
+    setSubmitError("");
+    setEditModalVisible(true);
+  };
+
+  const onUpdateReview = async () => {
+    if (!editingReview) {
+      return;
+    }
+
+    setSubmitError("");
+    if (!editComment.trim()) {
+      setSubmitError("Comment cannot be empty");
+      return;
+    }
+
+    setSavingEdit(true);
+    try {
+      await reviewApi.updateReview(editingReview._id, {
+        rating: parseInt(editRating, 10),
+        comment: editComment.trim()
+      });
+      setEditModalVisible(false);
+      setEditingReview(null);
+      setEditRating("5");
+      setEditComment("");
+      setSubmitError("");
+      loadReviews();
+    } catch (err) {
+      setSubmitError(err.response?.data?.message || "Failed to update review");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const renderStars = (count) => {
+    const total = Math.max(0, Math.min(5, Math.round(Number(count) || 0)));
+    return Array.from({ length: 5 }, (_, index) => (
+      <StarIcon
+        key={index}
+        filled={index < total}
+        color={index < total ? estavaCore.colors.accent : estavaCore.colors.border}
+        size={16}
+      />
+    ));
+  };
+
+  const onDeleteReview = (reviewId) => {
+    Alert.alert("Delete review", "Are you sure you want to delete this review?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await reviewApi.deleteReview(reviewId);
+            loadReviews();
+          } catch (err) {
+            setError(err.response?.data?.message || "Failed to delete review");
+          }
+        }
+      }
+    ]);
+  };
+
+  if (loading) return <ActivityIndicator style={{ marginTop: 20 }} size="large" color={estavaCore.colors.accent} />;
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>My Reviews</Text>
+      <Text style={styles.subtitle}>Write, edit, and manage property reviews.</Text>
+      {!!error && <Text style={styles.error}>{error}</Text>}
+      <Pressable
+        style={styles.addButton}
+        onPress={() => {
+          setModalVisible(true);
+          setPropertySelectMode(false);
+          setSelectedProperty(null);
+          setRating("5");
+          setComment("");
+          setSubmitError("");
+        }}
+      >
+        <Text style={styles.addButtonText}>+ Add Review</Text>
+      </Pressable>
+
+      {reviews.length === 0 ? (
+        <Text style={styles.emptyText}>No reviews yet</Text>
+      ) : (
+        <FlatList
+          data={reviews}
+          keyExtractor={(item) => item._id}
+          renderItem={({ item }) => (
+            <View style={styles.card}>
+              <Text style={styles.target}>
+                {item.propertyId?.title || item.agentId?.fullName || "Target"}
+              </Text>
+              <View style={styles.starsRow}>{renderStars(item.rating)}</View>
+              <Text style={styles.comment}>{item.comment}</Text>
+              <Text style={styles.date}>{new Date(item.createdAt).toLocaleDateString()}</Text>
+              <View style={styles.cardActions}>
+                <Pressable style={styles.editButton} onPress={() => onOpenEditReview(item)}>
+                  <Text style={styles.editButtonText}>Edit</Text>
+                </Pressable>
+                <Pressable style={styles.deleteButton} onPress={() => onDeleteReview(item._id)}>
+                  <Text style={styles.deleteButtonText}>Delete</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
+        />
+      )}
+
+      <Modal visible={modalVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {!propertySelectMode ? (
+              <>
+                <Text style={styles.modalTitle}>Select Property</Text>
+                {properties.length === 0 ? (
+                  <Text style={styles.emptyText}>No properties available</Text>
+                ) : (
+                  <ScrollView style={styles.propertyList} nestedScrollEnabled={true}>
+                    {properties.map((prop) => (
+                      <Pressable
+                        key={prop._id}
+                        style={[
+                          styles.propertyItem,
+                          selectedProperty?._id === prop._id && styles.propertyItemSelected
+                        ]}
+                        onPress={() => setSelectedProperty(prop)}
+                      >
+                        <Text style={styles.propertyTitle}>{prop.title}</Text>
+                        <Text style={styles.propertyPrice}>LKR {Number(prop.price || 0).toLocaleString()}</Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                )}
+                <View style={styles.modalButtons}>
+                  <Pressable style={styles.cancelBtn} onPress={() => {
+                    setModalVisible(false);
+                    setPropertySelectMode(false);
+                    setSelectedProperty(null);
+                    setSubmitError("");
+                  }}>
+                    <Text style={styles.cancelText}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.submitBtn, !selectedProperty && styles.submitBtnDisabled]}
+                    onPress={() => setPropertySelectMode(true)}
+                    disabled={!selectedProperty}
+                  >
+                    <Text style={styles.submitText}>Next</Text>
+                  </Pressable>
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={styles.modalTitle}>Review: {selectedProperty?.title}</Text>
+                {!!submitError && <Text style={styles.error}>{submitError}</Text>}
+                <View style={styles.ratingContainer}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Pressable
+                      key={star}
+                      onPress={() => setRating(star.toString())}
+                      style={[styles.starButton, star <= parseInt(rating, 10) && styles.starSelected]}
+                    >
+                      <StarIcon
+                        filled={star <= parseInt(rating, 10)}
+                        color={star <= parseInt(rating, 10) ? estavaCore.colors.accent : estavaCore.colors.border}
+                        size={22}
+                      />
+                    </Pressable>
+                  ))}
+                </View>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Write your comment..."
+                  multiline
+                  numberOfLines={4}
+                  value={comment}
+                  onChangeText={setComment}
+                />
+                <View style={styles.modalButtons}>
+                  <Pressable
+                    style={styles.cancelBtn}
+                    onPress={() => {
+                      setPropertySelectMode(false);
+                      setSelectedProperty(null);
+                      setSubmitError("");
+                    }}
+                  >
+                    <Text style={styles.cancelText}>Back</Text>
+                  </Pressable>
+                  <Pressable style={styles.submitBtn} onPress={onSubmitReview}>
+                    <Text style={styles.submitText}>Submit</Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={editModalVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Edit Review</Text>
+            {!!submitError && <Text style={styles.error}>{submitError}</Text>}
+
+            <View style={styles.ratingContainer}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Pressable
+                  key={star}
+                  onPress={() => setEditRating(star.toString())}
+                  style={[styles.starButton, star <= parseInt(editRating, 10) && styles.starSelected]}
+                >
+                  <StarIcon
+                    filled={star <= parseInt(editRating, 10)}
+                    color={star <= parseInt(editRating, 10) ? estavaCore.colors.accent : estavaCore.colors.border}
+                    size={22}
+                  />
+                </Pressable>
+              ))}
+            </View>
+
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Update your comment..."
+              multiline
+              numberOfLines={4}
+              value={editComment}
+              onChangeText={setEditComment}
+            />
+
+            <View style={styles.modalButtons}>
+              <Pressable
+                style={styles.cancelBtn}
+                onPress={() => {
+                  setEditModalVisible(false);
+                  setEditingReview(null);
+                  setSubmitError("");
+                }}
+              >
+                <Text style={styles.cancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.submitBtn, savingEdit && styles.submitBtnDisabled]}
+                onPress={onUpdateReview}
+                disabled={savingEdit}
+              >
+                <Text style={styles.submitText}>{savingEdit ? "Saving..." : "Save"}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, padding: 18, backgroundColor: estavaCore.colors.background },
+  title: { fontSize: 24, fontWeight: "700", marginBottom: 4, color: estavaCore.colors.primary },
+  subtitle: { color: estavaCore.colors.textSecondary, marginBottom: 14 },
+  error: { color: estavaCore.colors.danger, marginBottom: 8 },
+  emptyText: { textAlign: "center", color: estavaCore.colors.textSecondary, marginTop: 20 },
+  addButton: {
+    backgroundColor: estavaCore.colors.primary,
+    borderRadius: 10,
+    minHeight: 48,
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 16
+  },
+  addButtonText: { color: "#fff", fontWeight: "700", textAlign: "center" },
+  card: {
+    backgroundColor: estavaCore.colors.surface,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
+    ...estavaCore.shadow.card
+  },
+  target: { fontSize: 16, fontWeight: "600", color: estavaCore.colors.textPrimary },
+  starsRow: { flexDirection: "row", gap: 4, marginTop: 6 },
+  comment: { fontSize: 14, color: estavaCore.colors.textSecondary, marginTop: 6 },
+  date: { fontSize: 12, color: estavaCore.colors.textSecondary, marginTop: 6 },
+  cardActions: { marginTop: 10, flexDirection: "row", gap: 8 },
+  editButton: { minHeight: 36, paddingHorizontal: 10, borderRadius: 8, justifyContent: "center", backgroundColor: estavaCore.colors.accentSoft },
+  editButtonText: { color: estavaCore.colors.accent, fontWeight: "700", fontSize: 12 },
+  deleteButton: { minHeight: 36, paddingHorizontal: 10, borderRadius: 8, justifyContent: "center", backgroundColor: estavaCore.colors.dangerSoft },
+  deleteButtonText: { color: estavaCore.colors.danger, fontWeight: "700", fontSize: 12 },
+  modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.3)" },
+  modalContent: { backgroundColor: estavaCore.colors.surface, padding: 18, borderTopLeftRadius: 16, borderTopRightRadius: 16, maxHeight: "85%" },
+  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12, color: estavaCore.colors.primary },
+  propertyList: { height: 250, marginBottom: 12, borderWidth: 1, borderColor: estavaCore.colors.border, borderRadius: 8 },
+  propertyItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: estavaCore.colors.border },
+  propertyItemSelected: { backgroundColor: estavaCore.colors.accentSoft, borderBottomColor: estavaCore.colors.accent },
+  propertyTitle: { fontSize: 14, fontWeight: "600", color: estavaCore.colors.textPrimary },
+  propertyPrice: { fontSize: 12, color: estavaCore.colors.textSecondary, marginTop: 4 },
+  ratingContainer: { flexDirection: "row", justifyContent: "space-around", marginBottom: 12 },
+  starButton: { padding: 8 },
+  starSelected: { transform: [{ scale: 1.2 }] },
+  modalInput: { borderWidth: 1, borderColor: estavaCore.colors.border, borderRadius: 10, padding: 12, marginBottom: 12, backgroundColor: estavaCore.colors.surface },
+  modalButtons: { flexDirection: "row", gap: 10 },
+  cancelBtn: { flex: 1, minHeight: 44, borderRadius: 10, backgroundColor: estavaCore.colors.surfaceMuted, alignItems: "center", justifyContent: "center" },
+  cancelText: { color: estavaCore.colors.textPrimary, fontWeight: "600" },
+  submitBtn: { flex: 1, minHeight: 44, borderRadius: 10, backgroundColor: estavaCore.colors.primary, alignItems: "center", justifyContent: "center" },
+  submitBtnDisabled: { opacity: 0.5 },
+  submitText: { color: "#fff", fontWeight: "600" }
+});

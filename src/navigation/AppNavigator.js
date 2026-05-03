@@ -1,0 +1,109 @@
+// Navigation graph with authenticated and unauthenticated route flows.
+import React from "react";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import LoginScreen from "../screens/LoginScreen";
+import RegisterScreen from "../screens/RegisterScreen";
+import HomeScreen from "../screens/HomeScreen";
+import PropertyListScreen from "../screens/PropertyListScreen";
+import PropertyDetailScreen from "../screens/PropertyDetailScreen";
+import EditPropertyScreen from "../screens/EditPropertyScreen";
+import FavoritesScreen from "../screens/FavoritesScreen";
+import InquiriesScreen from "../screens/InquiriesScreen";
+import AppointmentsScreen from "../screens/AppointmentsScreen";
+import ReviewsScreen from "../screens/ReviewsScreen";
+import NotificationsScreen from "../screens/NotificationsScreen";
+import CreatePropertyScreen from "../screens/CreatePropertyScreen";
+import ProfileScreen from "../screens/ProfileScreen";
+import { useAuth } from "../context/AuthContext";
+import { estavaCore } from "../theme/estavaCore";
+
+const Stack = createNativeStackNavigator();
+
+export default function AppNavigator() {
+  const { isAuthenticated } = useAuth();
+
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: estavaCore.colors.surface
+        },
+        headerShadowVisible: false,
+        headerTintColor: estavaCore.colors.primary,
+        headerTitleStyle: {
+          fontWeight: "700"
+        },
+        contentStyle: {
+          backgroundColor: estavaCore.colors.background
+        }
+      }}
+    >
+      {isAuthenticated ? (
+        <>
+          <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
+          <Stack.Screen
+            name="PropertyList"
+            component={PropertyListScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="MyProperties"
+            component={PropertyListScreen}
+            initialParams={{ viewMode: "mine" }}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="CreateProperty"
+            component={CreatePropertyScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="PropertyDetail"
+            component={PropertyDetailScreen}
+            options={{ title: "Property Details" }}
+          />
+          <Stack.Screen
+            name="EditProperty"
+            component={EditPropertyScreen}
+            options={{ title: "Edit Property" }}
+          />
+          <Stack.Screen
+            name="Favorites"
+            component={FavoritesScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Inquiries"
+            component={InquiriesScreen}
+            options={{ title: "Inquiries" }}
+          />
+          <Stack.Screen
+            name="Appointments"
+            component={AppointmentsScreen}
+            options={{ title: "Appointments" }}
+          />
+          <Stack.Screen
+            name="Reviews"
+            component={ReviewsScreen}
+            options={{ title: "Reviews" }}
+          />
+          <Stack.Screen
+            name="Notifications"
+            component={NotificationsScreen}
+            options={{ title: "Notifications" }}
+          />
+          <Stack.Screen
+            name="Profile"
+            component={ProfileScreen}
+            options={{ title: "My Profile" }}
+          />
+        </>
+      ) : (
+        <>
+          <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Register" component={RegisterScreen} options={{ title: "Register" }} />
+        </>
+      )}
+    </Stack.Navigator>
+  );
+}

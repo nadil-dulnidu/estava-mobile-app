@@ -1,0 +1,1020 @@
+// Screen component for user-facing workflow in the real-estate mobile app.
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  ScrollView,
+  Image,
+  Pressable,
+  Modal,
+  TextInput,
+  Alert,
+  Platform
+} from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { getPropertyById, updateProperty } from "../api/propertyApi";
+import { favoriteApi } from "../api/favoriteApi";
+import { inquiryApi } from "../api/inquiryApi";
+import { appointmentApi } from "../api/appointmentApi";
+import { reviewApi } from "../api/reviewApi";
+import { useAuth } from "../context/AuthContext";
+import { estavaCore } from "../theme/estavaCore";
+import { pushRecentlyViewedProperty } from "../utils/recentlyViewedProperties";
+import { formatAreaSize, getPropertyTypeLabel, hasRooms } from "../utils/propertyDisplay";
+
+export default function PropertyDetailScreen({ route, navigation }) {
+  const { propertyId } = route.params;
+  const { user } = useAuth();
+  const [property, setProperty] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteId, setFavoriteId] = useState("");
+  const [reviews, setReviews] = useState([]);
+  const [reviewStats, setReviewStats] = useState({ avgRating: 0, total: 0 });
+  const [reviewsError, setReviewsError] = useState("");
+  const [ownerActionLoading, setOwnerActionLoading] = useState(false);
+  const [favoriteActionLoading, setFavoriteActionLoading] = useState(false);
+
+  // Inquiry modal state
+  const [inquiryModalVisible, setInquiryModalVisible] = useState(false);
+  const [inquirySubject, setInquirySubject] = useState("");
+  const [inquiryMessage, setInquiryMessage] = useState("");
+  const [inquiryContact, setInquiryContact] = useState("");
+
+  // Appointment modal state
+  const [appointmentModalVisible, setAppointmentModalVisible] = useState(false);
+  const [appointmentDate, setAppointmentDate] = useState(new Date());
+  const [appointmentTime, setAppointmentTime] = useState(new Date());
+  const [appointmentPurpose, setAppointmentPurpose] = useState("");
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
+  const getNormalizedUserId = (entity) => {
+    if (!entity) return "";
+    if (typeof entity === "string") return entity;
+    return entity._id || entity.id || "";
+  };
+
+  const currentUserId = getNormalizedUserId(user);
+  const ownerId = getNormalizedUserId(property?.createdBy);
+  const isOwner = !!currentUserId && !!ownerId && String(currentUserId) === String(ownerId);
+  const canContactOwner = Boolean(user) && !isOwner;
+
+  const renderStars = (value) => {
+    const normalized = Math.max(0, Math.min(5, Math.round(Number(value) || 0)));
+    return `${"★".repeat(normalized)}${"☆".repeat(5 - normalized)}`;
+  };
+
+  const formatDateValue = (value) => {
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, "0");
+    const day = String(value.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatTimeValue = (value) => {
+    const hours = String(value.getHours()).padStart(2, "0");
+    const minutes = String(value.getMinutes()).padStart(2, "0");
+    return `${hours}:${minutes}`;
+  };
+
+  const formatLabel = (value, fallback = "Not provided") => {
+    const normalized = String(value || "").trim();
+    if (!normalized) {
+      return fallback;
+    }
+
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  };
+
+  const getSafeErrorMessage = (fallback, err) => {
+    const message = err?.response?.data?.message;
+    if (typeof message === "string" && message.trim().length > 0) {
+      return message;
+    }
+    return fallback;
+  };
+
+  const resolveFavoriteIdForProperty = async (targetPropertyId) => {
+    const response = await favoriteApi.getFavorites();
+    const favorites = Array.isArray(response?.data?.data) ? response.data.data : [];
+
+    const matchedFavorite = favorites.find((favoriteItem) => {
+      const propertyRef = favoriteItem?.propertyId;
+      const candidatePropertyId = typeof propertyRef === "string" ? propertyRef : propertyRef?._id;
+
+      return String(candidatePropertyId || "") === String(targetPropertyId || "");
+    });
+
+    return matchedFavorite?._id || "";
+  };
+
+  const syncFavoriteState = async (targetPropertyId) => {
+    try {
+      const matchedFavoriteId = await resolveFavoriteIdForProperty(targetPropertyId);
+      setFavoriteId(matchedFavoriteId);
+      setIsFavorite(Boolean(matchedFavoriteId));
+    } catch {
+      setFavoriteId("");
+      setIsFavorite(false);
+    }
+  };
+
+  const loadPropertyReviews = async () => {
+    try {
+      setReviewsError("");
+      const reviewData = await reviewApi.getPropertyReviews(propertyId);
+      setReviews(Array.isArray(reviewData?.reviews) ? reviewData.reviews : []);
+      setReviewStats({
+        avgRating: Number(reviewData?.avgRating || 0),
+        total: Number(reviewData?.total || 0)
+      });
+    } catch (reviewsFetchError) {
+      setReviews([]);
+      setReviewStats({ avgRating: 0, total: 0 });
+      setReviewsError(reviewsFetchError?.response?.data?.message || "Failed to load reviews");
+    }
+  };
+
+  const loadPropertyData = useCallback(async () => {
+    let shouldLoadReviews = false;
+
+    setLoading(true);
+
+    try {
+      setError("");
+      const result = await getPropertyById(propertyId);
+      setProperty(result);
+      pushRecentlyViewedProperty(currentUserId, result?._id || propertyId);
+      await syncFavoriteState(result?._id || propertyId);
+      shouldLoadReviews = true;
+    } catch (fetchError) {
+      setProperty(null);
+      setFavoriteId("");
+      setIsFavorite(false);
+      setReviews([]);
+      setReviewStats({ avgRating: 0, total: 0 });
+      setReviewsError("");
+      setError(fetchError?.response?.data?.message || "Failed to load property details");
+    } finally {
+      setLoading(false);
+    }
+
+    if (shouldLoadReviews) {
+      await loadPropertyReviews();
+    }
+  }, [currentUserId, propertyId]);
+
+  useEffect(() => {
+    loadPropertyData();
+  }, [loadPropertyData]);
+
+  const handleStatusUpdate = async (status) => {
+    if (!isOwner || ownerActionLoading || property?.listingStatus === status) {
+      return;
+    }
+
+    setOwnerActionLoading(true);
+    try {
+      const updated = await updateProperty(propertyId, { listingStatus: status });
+      setProperty(updated);
+      Alert.alert("Success", "Listing status updated");
+    } catch (updateError) {
+      Alert.alert("Error", updateError?.response?.data?.message || "Failed to update listing status");
+    } finally {
+      setOwnerActionLoading(false);
+    }
+  };
+
+  const handleOpenEditProperty = () => {
+    if (!isOwner) {
+      return;
+    }
+
+    navigation.navigate("EditProperty", { propertyId: property._id });
+  };
+
+  const handleAddFavorite = async () => {
+    if (favoriteActionLoading) {
+      return;
+    }
+
+    setFavoriteActionLoading(true);
+    try {
+      const response = await favoriteApi.addFavorite(propertyId);
+      const createdFavoriteId = response?.data?.data?._id || "";
+
+      if (createdFavoriteId) {
+        setFavoriteId(createdFavoriteId);
+        setIsFavorite(true);
+      } else {
+        await syncFavoriteState(propertyId);
+      }
+      Alert.alert("Success", "Added to favorites");
+    } catch (err) {
+      Alert.alert("Error", getSafeErrorMessage("Failed to add favorite", err));
+    } finally {
+      setFavoriteActionLoading(false);
+    }
+  };
+
+  const handleRemoveFavorite = async () => {
+    if (favoriteActionLoading) {
+      return;
+    }
+
+    setFavoriteActionLoading(true);
+    try {
+      let targetFavoriteId = favoriteId;
+
+      if (!targetFavoriteId) {
+        targetFavoriteId = await resolveFavoriteIdForProperty(propertyId);
+      }
+
+      if (!targetFavoriteId) {
+        setFavoriteId("");
+        setIsFavorite(false);
+        Alert.alert("Info", "Property is not in your favorites");
+        return;
+      }
+
+      await favoriteApi.removeFavorite(targetFavoriteId);
+      setFavoriteId("");
+      setIsFavorite(false);
+      Alert.alert("Success", "Removed from favorites");
+    } catch (err) {
+      Alert.alert("Error", getSafeErrorMessage("Failed to remove favorite", err));
+    } finally {
+      setFavoriteActionLoading(false);
+    }
+  };
+
+  const openInquiryModal = () => {
+    if (!String(inquiryContact || "").trim() && user?.phoneNumber) {
+      setInquiryContact(String(user.phoneNumber).replace(/\D/g, "").slice(0, 10));
+    }
+    setInquiryModalVisible(true);
+  };
+
+  const closeInquiryModal = () => {
+    setInquiryModalVisible(false);
+  };
+
+  const handleSendInquiry = async () => {
+    if (!inquirySubject.trim() || !inquiryMessage.trim() || !inquiryContact.trim()) {
+      Alert.alert("Error", "All fields are required");
+      return;
+    }
+
+    if (!/^[0-9]{10}$/.test(inquiryContact.trim())) {
+      Alert.alert("Error", "Contact number must be exactly 10 digits");
+      return;
+    }
+
+    try {
+      await inquiryApi.sendInquiry({
+        propertyId,
+        subject: inquirySubject,
+        message: inquiryMessage,
+        contactNumber: inquiryContact
+      });
+      setInquiryModalVisible(false);
+      setInquirySubject("");
+      setInquiryMessage("");
+      setInquiryContact("");
+      Alert.alert("Success", "Inquiry sent successfully");
+    } catch (err) {
+      Alert.alert("Error", err.response?.data?.message || "Failed to send inquiry");
+    }
+  };
+
+  const handleBookAppointment = async () => {
+    try {
+      await appointmentApi.createAppointment({
+        propertyId,
+        date: formatDateValue(appointmentDate),
+        time: formatTimeValue(appointmentTime),
+        visitPurpose: appointmentPurpose || "Property viewing"
+      });
+      setAppointmentModalVisible(false);
+      setAppointmentDate(new Date());
+      setAppointmentTime(new Date());
+      setAppointmentPurpose("");
+      Alert.alert("Success", "Appointment booked successfully");
+    } catch (err) {
+      Alert.alert("Error", err.response?.data?.message || "Failed to book appointment");
+    }
+  };
+
+  const closeAppointmentModal = () => {
+    setAppointmentModalVisible(false);
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#1d4ed8" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.error}>{error}</Text>
+        <Pressable style={styles.retryButton} onPress={loadPropertyData}>
+          <Text style={styles.retryButtonText}>Try again</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  if (!property) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.error}>Property not found.</Text>
+        <Pressable style={styles.retryButton} onPress={loadPropertyData}>
+          <Text style={styles.retryButtonText}>Reload property</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {Array.isArray(property.imageUrls) && property.imageUrls.length > 0 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageRow}>
+          {property.imageUrls.map((url) => (
+            <Image key={url} source={{ uri: url }} style={styles.image} />
+          ))}
+        </ScrollView>
+      ) : (
+        <View style={styles.imageEmpty}>
+          <Text style={styles.imageEmptyText}>No property images</Text>
+        </View>
+      )}
+
+      <Text style={styles.title}>{property.title}</Text>
+      <Text style={styles.location}>{property.location}</Text>
+      <Text style={styles.price}>LKR {Number(property.price || 0).toLocaleString()}</Text>
+      <Text style={styles.status}>Status: {formatLabel(property.listingStatus)}</Text>
+
+      <View style={styles.summaryRow}>
+        <View style={styles.summaryChip}>
+          <Text style={styles.summaryChipLabel}>{getPropertyTypeLabel(property.propertyType)}</Text>
+        </View>
+        <View style={styles.summaryChip}>
+          <Text style={styles.summaryChipLabel}>{reviewStats.avgRating.toFixed(1)} / 5 rating</Text>
+        </View>
+        <View style={styles.summaryChip}>
+          <Text style={styles.summaryChipLabel}>{reviewStats.total} review{reviewStats.total === 1 ? "" : "s"}</Text>
+        </View>
+      </View>
+
+      <View style={styles.nextStepCard}>
+        <Text style={styles.nextStepTitle}>{isOwner ? "Manage this listing" : "Take the next step"}</Text>
+        <Text style={styles.nextStepText}>
+          {isOwner
+            ? "Update status here or open the editor to change listing details and images."
+            : "Save the property, send an inquiry, or book a visit without leaving this page."}
+        </Text>
+      </View>
+
+      {isOwner ? (
+        <>
+          <Text style={styles.sectionTitle}>Owner Controls</Text>
+          <Text style={styles.ownerHint}>Only you can manage this listing status from here. Use Edit Property for everything else.</Text>
+          <View style={styles.statusChipRow}>
+            {["available", "rented", "delisted", "sold"].map((statusOption) => (
+              <Pressable
+                key={statusOption}
+                style={[
+                  styles.statusChip,
+                  property.listingStatus === statusOption && styles.statusChipActive,
+                  ownerActionLoading && styles.disabledControl
+                ]}
+                onPress={() => handleStatusUpdate(statusOption)}
+                disabled={ownerActionLoading}
+              >
+                <Text
+                  style={[
+                    styles.statusChipText,
+                    property.listingStatus === statusOption && styles.statusChipTextActive
+                  ]}
+                >
+                  {statusOption.charAt(0).toUpperCase() + statusOption.slice(1)}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <Pressable style={styles.editListingButton} onPress={handleOpenEditProperty}>
+            <Text style={styles.editListingText}>Edit Property</Text>
+          </Pressable>
+        </>
+      ) : null}
+
+      {/* Action Buttons */}
+      <View style={styles.actionButtonsContainer}>
+        <Pressable
+          style={[
+            styles.actionButton,
+            isFavorite && styles.actionButtonActive,
+            favoriteActionLoading && styles.disabledControl
+          ]}
+          onPress={isFavorite ? handleRemoveFavorite : handleAddFavorite}
+          disabled={favoriteActionLoading || !canContactOwner}
+        >
+          <Text style={[styles.actionButtonLabel, isFavorite && styles.actionButtonLabelActive]}>
+            {isFavorite ? "Saved" : "Favorite"}
+          </Text>
+        </Pressable>
+
+        <Pressable
+          style={[styles.actionButton, !canContactOwner && styles.disabledControl]}
+          onPress={openInquiryModal}
+          disabled={!canContactOwner}
+        >
+          <Text style={styles.actionButtonLabel}>Inquiry</Text>
+        </Pressable>
+
+        <Pressable
+          style={[styles.actionButton, !canContactOwner && styles.disabledControl]}
+          onPress={() => setAppointmentModalVisible(true)}
+          disabled={!canContactOwner}
+        >
+          <Text style={styles.actionButtonLabel}>Book Visit</Text>
+        </Pressable>
+      </View>
+
+      {!canContactOwner ? (
+        <Text style={styles.actionHelpText}>
+          {isOwner
+            ? "Owner contact actions are hidden on your own listing."
+            : "Sign in to save this property, send inquiries, and book visits."}
+        </Text>
+      ) : null}
+
+      <Text style={styles.sectionTitle}>Description</Text>
+      <View style={styles.sectionCard}>
+        <Text style={styles.body}>{property.description}</Text>
+      </View>
+
+      <Text style={styles.sectionTitle}>Details</Text>
+      <View style={styles.sectionCard}>
+        <Text style={styles.body}>Type: {getPropertyTypeLabel(property.propertyType)}</Text>
+        {hasRooms(property.propertyType) ? (
+          <>
+            <Text style={styles.body}>Bedrooms: {property.bedrooms ?? 0}</Text>
+            <Text style={styles.body}>Bathrooms: {property.bathrooms ?? 0}</Text>
+          </>
+        ) : null}
+        <Text style={styles.body}>Area Size: {formatAreaSize(property.areaSize)}</Text>
+      </View>
+
+      {Array.isArray(property.features) && property.features.length > 0 ? (
+        <>
+          <Text style={styles.sectionTitle}>Amenities</Text>
+          <View style={styles.amenitiesGrid}>
+            {property.features.map((feature, index) => (
+              <View key={index} style={styles.amenityItem}>
+                <Text style={styles.amenityText}>✓ {feature}</Text>
+              </View>
+            ))}
+          </View>
+        </>
+      ) : null}
+
+      <Text style={styles.sectionTitle}>Reviews</Text>
+      <Pressable
+        style={styles.reviewShortcutButton}
+        onPress={() =>
+          navigation.navigate("Reviews", {
+            preselectedProperty: {
+              _id: property._id,
+              title: property.title,
+              price: property.price
+            }
+          })
+        }
+      >
+        <Text style={styles.reviewShortcutButtonText}>Review this property</Text>
+      </Pressable>
+      <Text style={styles.reviewSummary}>
+        Average: {reviewStats.avgRating.toFixed(1)} / 5 ({reviewStats.total} review
+        {reviewStats.total === 1 ? "" : "s"})
+      </Text>
+      {reviewsError ? <Text style={styles.error}>{reviewsError}</Text> : null}
+
+      <View style={styles.sectionCard}>
+        {reviews.length === 0 ? (
+          <Text style={styles.body}>No reviews yet.</Text>
+        ) : (
+          reviews.map((review) => (
+            <View key={review._id} style={styles.reviewCard}>
+              <Text style={styles.reviewAuthor}>{review.userId?.fullName || "Anonymous user"}</Text>
+              <Text style={styles.reviewStars}>{renderStars(review.rating)}</Text>
+              <Text style={styles.reviewComment}>{review.comment || "No comment provided."}</Text>
+            </View>
+          ))
+        )}
+      </View>
+
+      {/* Inquiry Modal */}
+      <Modal
+        visible={inquiryModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={closeInquiryModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Send Inquiry</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Subject"
+              value={inquirySubject}
+              onChangeText={setInquirySubject}
+              accessibilityLabel="Inquiry subject"
+            />
+            <TextInput
+              style={[styles.modalInput, styles.modalInputLarge]}
+              placeholder="Message"
+              multiline
+              numberOfLines={4}
+              value={inquiryMessage}
+              onChangeText={setInquiryMessage}
+              accessibilityLabel="Inquiry message"
+            />
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Contact Number"
+              keyboardType="phone-pad"
+              maxLength={10}
+              value={inquiryContact}
+              onChangeText={(text) => setInquiryContact(text.replace(/\D/g, "").slice(0, 10))}
+              autoComplete="tel"
+              textContentType="telephoneNumber"
+              accessibilityLabel="Contact number"
+              accessibilityHint="A 10-digit phone number for the property owner to reply to"
+            />
+            <View style={styles.modalButtons}>
+              <Pressable
+                style={styles.cancelBtn}
+                onPress={closeInquiryModal}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel inquiry"
+              >
+                <Text style={styles.cancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={styles.submitBtn}
+                onPress={handleSendInquiry}
+                accessibilityRole="button"
+                accessibilityLabel="Send inquiry"
+              >
+                <Text style={styles.submitText}>Send</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Appointment Modal */}
+      <Modal
+        visible={appointmentModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={closeAppointmentModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Book Appointment</Text>
+            <Pressable style={styles.pickerButton} onPress={() => setShowDatePicker(true)}>
+              <Text style={styles.pickerLabel}>Date</Text>
+              <Text style={styles.pickerValue}>{formatDateValue(appointmentDate)}</Text>
+            </Pressable>
+            <Pressable style={styles.pickerButton} onPress={() => setShowTimePicker(true)}>
+              <Text style={styles.pickerLabel}>Time</Text>
+              <Text style={styles.pickerValue}>{formatTimeValue(appointmentTime)}</Text>
+            </Pressable>
+
+            {showDatePicker && (
+              <DateTimePicker
+                value={appointmentDate}
+                mode="date"
+                display={Platform.OS === "ios" ? "inline" : "default"}
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(Platform.OS === "ios");
+                  if (selectedDate) {
+                    setAppointmentDate(selectedDate);
+                  }
+                }}
+              />
+            )}
+
+            {showTimePicker && (
+              <DateTimePicker
+                value={appointmentTime}
+                mode="time"
+                is24Hour={true}
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                onChange={(event, selectedTime) => {
+                  setShowTimePicker(Platform.OS === "ios");
+                  if (selectedTime) {
+                    setAppointmentTime(selectedTime);
+                  }
+                }}
+              />
+            )}
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Purpose (e.g., Property viewing)"
+              value={appointmentPurpose}
+              onChangeText={setAppointmentPurpose}
+              accessibilityLabel="Appointment purpose"
+            />
+            <View style={styles.modalButtons}>
+              <Pressable
+                style={styles.cancelBtn}
+                onPress={closeAppointmentModal}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel appointment"
+              >
+                <Text style={styles.cancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={styles.submitBtn}
+                onPress={handleBookAppointment}
+                accessibilityRole="button"
+                accessibilityLabel="Book appointment"
+              >
+                <Text style={styles.submitText}>Book</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: estavaCore.colors.background
+  },
+  content: {
+    padding: 16,
+    paddingBottom: 24
+  },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: estavaCore.colors.background,
+    padding: 16
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: estavaCore.colors.primary
+  },
+  location: {
+    marginTop: 8,
+    color: estavaCore.colors.textSecondary
+  },
+  price: {
+    marginTop: 8,
+    fontSize: 20,
+    fontWeight: "800",
+    color: estavaCore.colors.accent
+  },
+  status: {
+    marginTop: 8,
+    color: estavaCore.colors.textSecondary
+  },
+  summaryRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 12
+  },
+  summaryChip: {
+    backgroundColor: estavaCore.colors.surface,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
+    paddingHorizontal: 10,
+    paddingVertical: 6
+  },
+  summaryChipLabel: {
+    color: estavaCore.colors.textPrimary,
+    fontSize: 12,
+    fontWeight: "700"
+  },
+  nextStepCard: {
+    marginTop: 14,
+    padding: 14,
+    borderRadius: 14,
+    backgroundColor: estavaCore.colors.surface,
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
+    ...estavaCore.shadow.card
+  },
+  nextStepTitle: {
+    color: estavaCore.colors.primary,
+    fontSize: 16,
+    fontWeight: "700"
+  },
+  nextStepText: {
+    marginTop: 6,
+    color: estavaCore.colors.textSecondary,
+    lineHeight: 20
+  },
+  ownerHint: {
+    color: "#6b7280",
+    marginBottom: 10
+  },
+  statusChipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 12
+  },
+  statusChip: {
+    backgroundColor: estavaCore.colors.surfaceMuted,
+    borderRadius: 16,
+    paddingVertical: 7,
+    paddingHorizontal: 12
+  },
+  statusChipActive: {
+    backgroundColor: estavaCore.colors.primary
+  },
+  statusChipText: {
+    color: "#374151",
+    fontWeight: "600"
+  },
+  statusChipTextActive: {
+    color: "#ffffff"
+  },
+  editListingButton: {
+    backgroundColor: estavaCore.colors.accentSoft,
+    borderColor: estavaCore.colors.accent,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: "center",
+    marginBottom: 6
+  },
+  editListingText: {
+    color: estavaCore.colors.accent,
+    fontWeight: "700"
+  },
+  addPhotosButton: {
+    backgroundColor: "#dbeafe",
+    borderColor: "#1d4ed8",
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: "center",
+    marginBottom: 6
+  },
+  addPhotosText: {
+    color: "#1d4ed8",
+    fontWeight: "700"
+  },
+  disabledControl: {
+    opacity: 0.6
+  },
+  actionButtonsContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    marginTop: 16,
+    marginBottom: 16,
+    gap: 8
+  },
+  actionButton: {
+    flex: 1,
+    backgroundColor: estavaCore.colors.surface,
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
+    borderRadius: 8,
+    minHeight: 44,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  actionButtonActive: {
+    backgroundColor: estavaCore.colors.accentSoft,
+    borderColor: estavaCore.colors.accent
+  },
+  actionButtonLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: estavaCore.colors.textPrimary
+  },
+  actionButtonLabelActive: {
+    color: estavaCore.colors.accent
+  },
+  actionHelpText: {
+    marginTop: -6,
+    marginBottom: 8,
+    color: estavaCore.colors.textSecondary,
+    fontSize: 12
+  },
+  imageRow: {
+    marginBottom: 12
+  },
+  image: {
+    width: 292,
+    height: 204,
+    borderRadius: 12,
+    marginRight: 10,
+    backgroundColor: estavaCore.colors.surfaceMuted
+  },
+  imageEmpty: {
+    marginBottom: 12,
+    height: 204,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
+    backgroundColor: estavaCore.colors.surfaceMuted,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  imageEmptyText: {
+    color: estavaCore.colors.textSecondary,
+    fontWeight: "600"
+  },
+  sectionCard: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
+    backgroundColor: estavaCore.colors.surface,
+    padding: 12,
+    ...estavaCore.shadow.card
+  },
+  amenitiesGrid: {
+    backgroundColor: estavaCore.colors.surface,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 6
+  },
+  amenityItem: {
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f3f4f6"
+  },
+  amenityText: {
+    color: "#374151",
+    fontSize: 14,
+    fontWeight: "500"
+  },
+  sectionTitle: {
+    marginTop: 20,
+    marginBottom: 8,
+    fontSize: 16,
+    fontWeight: "700",
+    color: estavaCore.colors.primary
+  },
+  body: {
+    color: estavaCore.colors.textSecondary,
+    lineHeight: 22
+  },
+  reviewSummary: {
+    color: "#1f2937",
+    fontWeight: "600",
+    marginBottom: 10
+  },
+  reviewShortcutButton: {
+    alignSelf: "flex-start",
+    backgroundColor: estavaCore.colors.primary,
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 10
+  },
+  reviewShortcutButtonText: {
+    color: "#ffffff",
+    fontWeight: "700"
+  },
+  reviewCard: {
+    backgroundColor: estavaCore.colors.surface,
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 10,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: estavaCore.colors.border
+  },
+  reviewAuthor: {
+    color: estavaCore.colors.textPrimary,
+    fontWeight: "700"
+  },
+  reviewStars: {
+    marginTop: 6,
+    color: "#f59e0b",
+    fontSize: 16
+  },
+  reviewComment: {
+    marginTop: 6,
+    color: "#374151"
+  },
+  error: {
+    color: estavaCore.colors.danger,
+    textAlign: "center"
+  },
+  retryButton: {
+    marginTop: 14,
+    backgroundColor: estavaCore.colors.primary,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10
+  },
+  retryButtonText: {
+    color: "#ffffff",
+    fontWeight: "700"
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.3)"
+  },
+  modalContent: {
+    backgroundColor: estavaCore.colors.surface,
+    padding: 16,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 16
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 12,
+    fontSize: 14
+  },
+  modalInputLarge: {
+    height: 100,
+    textAlignVertical: "top"
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    marginTop: 16
+  },
+  cancelBtn: {
+    minHeight: 44,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    backgroundColor: "#e5e7eb"
+  },
+  cancelText: {
+    color: "#374151",
+    fontWeight: "600"
+  },
+  submitBtn: {
+    minHeight: 44,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    backgroundColor: estavaCore.colors.primary
+  },
+  submitText: {
+    color: "#fff",
+    fontWeight: "600"
+  },
+  pickerButton: {
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
+    borderRadius: 8,
+    minHeight: 44,
+    padding: 10,
+    marginBottom: 12,
+    backgroundColor: "#fff"
+  },
+  pickerLabel: {
+    color: "#6b7280",
+    fontSize: 12
+  },
+  pickerValue: {
+    marginTop: 4,
+    color: "#111827",
+    fontWeight: "600"
+  }
+});
