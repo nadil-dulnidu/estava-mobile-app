@@ -4,6 +4,12 @@ const AppError = require("../utils/AppError");
 
 const validTypes = ["system", "inquiry", "appointment", "review", "listing"];
 
+const validateNotificationIdParam = (notificationId) => {
+  if (!notificationId || !mongoose.Types.ObjectId.isValid(notificationId)) {
+    throw new AppError("Valid notification id is required", 400);
+  }
+};
+
 const validateCreateNotificationInput = (payload) => {
   const { userId, title, message, type } = payload;
 
@@ -25,5 +31,6 @@ const validateCreateNotificationInput = (payload) => {
 };
 
 module.exports = {
+  validateNotificationIdParam,
   validateCreateNotificationInput
 };

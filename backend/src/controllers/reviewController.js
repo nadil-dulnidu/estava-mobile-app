@@ -2,6 +2,8 @@
 const catchAsync = require("../utils/catchAsync");
 const { successResponse } = require("../utils/apiResponse");
 const {
+  validateReviewIdParam,
+  validateReviewTargetId,
   validateCreateReviewInput,
   validateUpdateReviewInput
 } = require("../validators/reviewValidator");
@@ -21,6 +23,7 @@ const create = catchAsync(async (req, res) => {
 });
 
 const listByProperty = catchAsync(async (req, res) => {
+  validateReviewTargetId(req.params.propertyId, "propertyId");
   const data = await listPropertyReviews(req.params.propertyId);
   return successResponse(res, data, "Reviews fetched successfully", 200);
 });
@@ -31,17 +34,20 @@ const listByUser = catchAsync(async (req, res) => {
 });
 
 const listByAgent = catchAsync(async (req, res) => {
+  validateReviewTargetId(req.params.agentId, "agentId");
   const data = await listAgentReviews(req.params.agentId);
   return successResponse(res, data, "Agent reviews fetched successfully", 200);
 });
 
 const update = catchAsync(async (req, res) => {
+  validateReviewIdParam(req.params.id);
   validateUpdateReviewInput(req.body);
   const review = await updateReview(req.params.id, req.body, req.user);
   return successResponse(res, review, "Review updated successfully", 200);
 });
 
 const remove = catchAsync(async (req, res) => {
+  validateReviewIdParam(req.params.id);
   await deleteReview(req.params.id, req.user);
   return successResponse(res, null, "Review deleted successfully", 200);
 });

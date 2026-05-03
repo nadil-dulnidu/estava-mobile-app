@@ -1,8 +1,9 @@
 // Service layer for inquiry business rules and ownership checks.
 const Inquiry = require("../models/Inquiry");
 const Property = require("../models/Property");
-const Notification = require("../models/Notification");
+const User = require("../models/User");
 const AppError = require("../utils/AppError");
+const { createAndDispatchNotification } = require("./notificationService");
 
 const getNextStatusFromPayload = (payload) => {
   return payload.inquiryStatus !== undefined ? payload.inquiryStatus : payload.status;
@@ -40,7 +41,7 @@ const clearInquiryResponseFields = (inquiry) => {
 };
 
 const createInquiry = async (payload, userId) => {
-  const property = await Property.findById(payload.propertyId).select("_id createdBy listingStatus");
+  const property = await Property.findById(payload.propertyId).select("_id title createdBy listingStatus");
   if (!property) {
     throw new AppError("Property not found", 404);
   }
@@ -64,12 +65,15 @@ const createInquiry = async (payload, userId) => {
   });
 
   // Notify listing owner that a new inquiry arrived.
-  await Notification.create({
+  const sender = await User.findById(userId).select("fullName email");
+  const senderName = sender?.fullName || sender?.email || "A buyer";
+  const propertyTitle = property?.title || "your listing";
+
+  await createAndDispatchNotification({
     userId: property.createdBy,
-    title: "New inquiry received",
-    message: "You received an inquiry for your listing.",
-    type: "inquiry",
-    status: "unread"
+    title: `Inquiry from ${senderName}`,
+    message: `${senderName} asked about "${propertyTitle}". Open Inquiries to view the message and reply.`,
+    type: "inquiry"
   });
 
   return inquiry;
@@ -182,12 +186,18 @@ const updateInquiry = async (inquiryId, payload, user) => {
     wantsResponseUpdate &&
     nextResponseMessage !== previousResponseMessage
   ) {
-    await Notification.create({
+    const [property, responder] = await Promise.all([
+      Property.findById(inquiry.propertyId).select("title"),
+      User.findById(user._id).select("fullName email")
+    ]);
+    const responderName = responder?.fullName || responder?.email || "The property owner";
+    const propertyTitle = property?.title || "your inquiry";
+
+    await createAndDispatchNotification({
       userId: inquiry.senderUserId,
-      title: "Inquiry response",
-      message: "Your inquiry has received a response from the property owner.",
-      type: "inquiry",
-      status: "unread"
+      title: `Response from ${responderName}`,
+      message: `${responderName} replied about "${propertyTitle}". Open Inquiries to read the response.`,
+      type: "inquiry"
     });
   }
 

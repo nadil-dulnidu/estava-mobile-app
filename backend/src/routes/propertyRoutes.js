@@ -8,7 +8,7 @@ const {
   update,
   remove
 } = require("../controllers/propertyController");
-const { protect, authorize } = require("../middlewares/authMiddleware");
+const { protect } = require("../middlewares/authMiddleware");
 const { uploadPropertyImages } = require("../middlewares/uploadMiddleware");
 
 const router = express.Router();
@@ -23,11 +23,11 @@ const optionalProtect = (req, res, next) => {
 };
 
 router.get("/", list);
-router.get("/mine", protect, authorize("buyer", "seller", "admin"), listMine);
+router.get("/mine", protect, listMine);
 router.get("/:id", optionalProtect, getById);
 
-router.post("/", protect, authorize("buyer", "seller", "admin"), uploadPropertyImages, create);
-router.patch("/:id", protect, authorize("buyer", "seller", "admin"), uploadPropertyImages, update);
-router.delete("/:id", protect, authorize("buyer", "seller", "admin"), remove);
+router.post("/", protect, uploadPropertyImages, create);
+router.patch("/:id", protect, uploadPropertyImages, update);
+router.delete("/:id", protect, remove);
 
 module.exports = router;
