@@ -9,6 +9,8 @@ import {
   ActivityIndicator
 } from "react-native";
 import { notificationApi } from "../api/notificationApi";
+import { estavaCore } from "../theme/estavaCore";
+import { BellIcon, CalendarIcon, GridIcon, HeartIcon, InboxIcon, StarIcon } from "../components/AppIcons";
 
 export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState([]);
@@ -60,22 +62,23 @@ export default function NotificationsScreen() {
     }
   };
 
-  if (loading) return <ActivityIndicator style={{ marginTop: 20 }} size="large" />;
+  if (loading) return <ActivityIndicator style={{ marginTop: 20 }} size="large" color={estavaCore.colors.accent} />;
 
   const getIcon = (type) => {
     const icons = {
-      inquiry: "💬",
-      appointment: "📅",
-      property: "🏠",
-      review: "⭐",
-      system: "🔔"
+      inquiry: InboxIcon,
+      appointment: CalendarIcon,
+      property: GridIcon,
+      review: StarIcon,
+      system: BellIcon
     };
-    return icons[type] || "📬";
+    return icons[type] || InboxIcon;
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Notifications</Text>
+      <Text style={styles.subtitle}>Updates from inquiries, appointments, and your account.</Text>
       {!!error && <Text style={styles.error}>{error}</Text>}
 
       {notifications.length === 0 ? (
@@ -86,9 +89,14 @@ export default function NotificationsScreen() {
           keyExtractor={(item) => item._id}
           renderItem={({ item }) => (
             <View style={[styles.card, item.status === "unread" && styles.cardUnread]}>
-              <Text style={styles.icon}>{getIcon(item.type)}</Text>
+              <View style={styles.iconWrap}>
+                {(() => {
+                  const Icon = getIcon(item.type);
+                  return <Icon color={estavaCore.colors.accent} size={18} />;
+                })()}
+              </View>
               <View style={styles.content}>
-                <Text style={styles.title}>{item.title}</Text>
+                <Text style={styles.itemTitle}>{item.title}</Text>
                 <Text style={styles.message}>{item.message}</Text>
                 <Text style={styles.timestamp}>
                   {new Date(item.createdAt).toLocaleString()}
@@ -113,31 +121,43 @@ export default function NotificationsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: "#f5f7fa" },
-  title: { fontSize: 24, fontWeight: "700", marginBottom: 16, color: "#1f2937" },
-  error: { color: "#b91c1c", marginBottom: 8 },
-  emptyText: { textAlign: "center", color: "#6b7280", marginTop: 20 },
+  container: { flex: 1, padding: 16, backgroundColor: estavaCore.colors.background },
+  title: { fontSize: 24, fontWeight: "700", marginBottom: 4, color: estavaCore.colors.primary },
+  subtitle: { color: estavaCore.colors.textSecondary, marginBottom: 14 },
+  error: { color: estavaCore.colors.danger, marginBottom: 8 },
+  emptyText: { textAlign: "center", color: estavaCore.colors.textSecondary, marginTop: 20 },
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: estavaCore.colors.surface,
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
     flexDirection: "row",
-    alignItems: "flex-start"
+    alignItems: "flex-start",
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
+    ...estavaCore.shadow.card
   },
   cardUnread: {
-    backgroundColor: "#dbeafe",
+    backgroundColor: estavaCore.colors.accentSoft,
     borderLeftWidth: 4,
-    borderLeftColor: "#1d4ed8"
+    borderLeftColor: estavaCore.colors.accent
   },
-  icon: { fontSize: 20, marginRight: 12 },
+  iconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: estavaCore.colors.accentSoft,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12
+  },
   content: { flex: 1 },
-  title: { fontSize: 14, fontWeight: "600" },
-  message: { fontSize: 13, color: "#374151", marginTop: 4 },
-  timestamp: { fontSize: 11, color: "#9ca3af", marginTop: 4 },
+  itemTitle: { fontSize: 14, fontWeight: "600", color: estavaCore.colors.textPrimary },
+  message: { fontSize: 13, color: estavaCore.colors.textSecondary, marginTop: 4 },
+  timestamp: { fontSize: 11, color: estavaCore.colors.textSecondary, marginTop: 4 },
   actions: { flexDirection: "row", gap: 8 },
   actionBtn: { paddingVertical: 6, paddingHorizontal: 8 },
-  actionText: { color: "#059669", fontWeight: "700", fontSize: 16 },
+  actionText: { color: estavaCore.colors.accent, fontWeight: "700", fontSize: 16 },
   deleteBtn: { paddingVertical: 6, paddingHorizontal: 8 },
-  deleteText: { color: "#b91c1c", fontWeight: "700", fontSize: 16 }
+  deleteText: { color: estavaCore.colors.danger, fontWeight: "700", fontSize: 16 }
 });

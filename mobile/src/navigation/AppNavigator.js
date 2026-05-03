@@ -6,13 +6,16 @@ import RegisterScreen from "../screens/RegisterScreen";
 import HomeScreen from "../screens/HomeScreen";
 import PropertyListScreen from "../screens/PropertyListScreen";
 import PropertyDetailScreen from "../screens/PropertyDetailScreen";
+import EditPropertyScreen from "../screens/EditPropertyScreen";
 import FavoritesScreen from "../screens/FavoritesScreen";
 import InquiriesScreen from "../screens/InquiriesScreen";
 import AppointmentsScreen from "../screens/AppointmentsScreen";
 import ReviewsScreen from "../screens/ReviewsScreen";
 import NotificationsScreen from "../screens/NotificationsScreen";
 import CreatePropertyScreen from "../screens/CreatePropertyScreen";
+import ProfileScreen from "../screens/ProfileScreen";
 import { useAuth } from "../context/AuthContext";
+import { estavaCore } from "../theme/estavaCore";
 
 const Stack = createNativeStackNavigator();
 
@@ -20,19 +23,39 @@ export default function AppNavigator() {
   const { isAuthenticated } = useAuth();
 
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: estavaCore.colors.surface
+        },
+        headerShadowVisible: false,
+        headerTintColor: estavaCore.colors.primary,
+        headerTitleStyle: {
+          fontWeight: "700"
+        },
+        contentStyle: {
+          backgroundColor: estavaCore.colors.background
+        }
+      }}
+    >
       {isAuthenticated ? (
         <>
-          <Stack.Screen name="Home" component={HomeScreen} options={{ title: "Dashboard" }} />
+          <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
           <Stack.Screen
             name="PropertyList"
             component={PropertyListScreen}
-            options={{ title: "Properties" }}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="MyProperties"
+            component={PropertyListScreen}
+            initialParams={{ viewMode: "mine" }}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="CreateProperty"
             component={CreatePropertyScreen}
-            options={{ title: "Post Property" }}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="PropertyDetail"
@@ -40,9 +63,14 @@ export default function AppNavigator() {
             options={{ title: "Property Details" }}
           />
           <Stack.Screen
+            name="EditProperty"
+            component={EditPropertyScreen}
+            options={{ title: "Edit Property" }}
+          />
+          <Stack.Screen
             name="Favorites"
             component={FavoritesScreen}
-            options={{ title: "My Favorites" }}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="Inquiries"
@@ -63,6 +91,11 @@ export default function AppNavigator() {
             name="Notifications"
             component={NotificationsScreen}
             options={{ title: "Notifications" }}
+          />
+          <Stack.Screen
+            name="Profile"
+            component={ProfileScreen}
+            options={{ title: "My Profile" }}
           />
         </>
       ) : (

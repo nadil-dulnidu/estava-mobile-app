@@ -4,12 +4,19 @@ const path = require("path");
 const multer = require("multer");
 const AppError = require("../utils/AppError");
 
-const uploadDir = path.join(__dirname, "../../uploads/properties");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+const ensureDir = (dirPath) => {
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+  }
+};
 
-const storage = multer.diskStorage({
+const propertyUploadDir = path.join(__dirname, "../../uploads/properties");
+const avatarUploadDir = path.join(__dirname, "../../uploads/avatars");
+
+ensureDir(propertyUploadDir);
+ensureDir(avatarUploadDir);
+
+const buildStorage = (uploadDir) => multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, uploadDir),
   filename: (_req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
@@ -27,7 +34,7 @@ const fileFilter = (_req, file, cb) => {
 };
 
 const uploadPropertyImages = multer({
-  storage,
+  storage: buildStorage(propertyUploadDir),
   fileFilter,
   limits: {
     fileSize: 5 * 1024 * 1024,
@@ -35,6 +42,34 @@ const uploadPropertyImages = multer({
   }
 }).array("images", 8);
 
+const avatarUpload = multer({
+  storage: buildStorage(avatarUploadDir),
+  fileFilter,
+  limits: {
+    fileSize: 2 * 1024 * 1024,
+    files: 1
+  }
+}).single("avatar");
+
+const uploadAvatarImage = (req, res, next) => {
+  avatarUpload(req, res, (error) => {
+    if (!error) {
+      return next();
+    }
+
+    if (error instanceof multer.MulterError) {
+      if (error.code === "LIMIT_FILE_SIZE") {
+        return next(new AppError("Avatar image must be 2MB or less", 400));
+      }
+
+      return next(new AppError("Invalid avatar upload request", 400));
+    }
+
+    return next(error);
+  });
+};
+
 module.exports = {
-  uploadPropertyImages
+  uploadPropertyImages,
+  uploadAvatarImage
 };

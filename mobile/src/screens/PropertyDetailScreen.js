@@ -14,12 +14,14 @@ import {
   Platform
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { deleteProperty, getPropertyById, updateProperty } from "../api/propertyApi";
+import { getPropertyById, updateProperty } from "../api/propertyApi";
 import { favoriteApi } from "../api/favoriteApi";
 import { inquiryApi } from "../api/inquiryApi";
 import { appointmentApi } from "../api/appointmentApi";
 import { reviewApi } from "../api/reviewApi";
 import { useAuth } from "../context/AuthContext";
+import { estavaCore } from "../theme/estavaCore";
+import { pushRecentlyViewedProperty } from "../utils/recentlyViewedProperties";
 
 export default function PropertyDetailScreen({ route, navigation }) {
   const { propertyId } = route.params;
@@ -134,6 +136,7 @@ export default function PropertyDetailScreen({ route, navigation }) {
         setError("");
         const result = await getPropertyById(propertyId);
         setProperty(result);
+        pushRecentlyViewedProperty(currentUserId, result?._id || propertyId);
         await syncFavoriteState(result?._id || propertyId);
         shouldLoadReviews = true;
       } catch (fetchError) {
@@ -173,31 +176,12 @@ export default function PropertyDetailScreen({ route, navigation }) {
     }
   };
 
-  const handleDeleteProperty = () => {
-    if (!isOwner || ownerActionLoading) {
+  const handleOpenEditProperty = () => {
+    if (!isOwner) {
       return;
     }
 
-    Alert.alert("Delete Listing", "Are you sure you want to delete this property listing?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          setOwnerActionLoading(true);
-          try {
-            await deleteProperty(propertyId);
-            Alert.alert("Success", "Property deleted successfully", [
-              { text: "OK", onPress: () => navigation.goBack() }
-            ]);
-          } catch (deleteError) {
-            Alert.alert("Error", deleteError?.response?.data?.message || "Failed to delete property");
-          } finally {
-            setOwnerActionLoading(false);
-          }
-        }
-      }
-    ]);
+    navigation.navigate("EditProperty", { propertyId: property._id });
   };
 
   const handleAddFavorite = async () => {
@@ -255,11 +239,28 @@ export default function PropertyDetailScreen({ route, navigation }) {
     }
   };
 
+  const openInquiryModal = () => {
+    if (!String(inquiryContact || "").trim() && user?.phoneNumber) {
+      setInquiryContact(String(user.phoneNumber).replace(/\D/g, "").slice(0, 10));
+    }
+    setInquiryModalVisible(true);
+  };
+
+  const closeInquiryModal = () => {
+    setInquiryModalVisible(false);
+  };
+
   const handleSendInquiry = async () => {
     if (!inquirySubject.trim() || !inquiryMessage.trim() || !inquiryContact.trim()) {
       Alert.alert("Error", "All fields are required");
       return;
     }
+
+    if (!/^[0-9]{10}$/.test(inquiryContact.trim())) {
+      Alert.alert("Error", "Contact number must be exactly 10 digits");
+      return;
+    }
+
     try {
       await inquiryApi.sendInquiry({
         propertyId,
@@ -295,6 +296,10 @@ export default function PropertyDetailScreen({ route, navigation }) {
     }
   };
 
+  const closeAppointmentModal = () => {
+    setAppointmentModalVisible(false);
+  };
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -321,6 +326,18 @@ export default function PropertyDetailScreen({ route, navigation }) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {Array.isArray(property.imageUrls) && property.imageUrls.length > 0 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageRow}>
+          {property.imageUrls.map((url) => (
+            <Image key={url} source={{ uri: url }} style={styles.image} />
+          ))}
+        </ScrollView>
+      ) : (
+        <View style={styles.imageEmpty}>
+          <Text style={styles.imageEmptyText}>No property images</Text>
+        </View>
+      )}
+
       <Text style={styles.title}>{property.title}</Text>
       <Text style={styles.location}>{property.location}</Text>
       <Text style={styles.price}>LKR {Number(property.price || 0).toLocaleString()}</Text>
@@ -329,7 +346,7 @@ export default function PropertyDetailScreen({ route, navigation }) {
       {isOwner ? (
         <>
           <Text style={styles.sectionTitle}>Owner Controls</Text>
-          <Text style={styles.ownerHint}>Only you can manage this listing status or remove it.</Text>
+          <Text style={styles.ownerHint}>Only you can manage this listing status from here. Use Edit Property for everything else.</Text>
           <View style={styles.statusChipRow}>
             {["available", "rented", "delisted", "sold"].map((statusOption) => (
               <Pressable
@@ -353,12 +370,8 @@ export default function PropertyDetailScreen({ route, navigation }) {
               </Pressable>
             ))}
           </View>
-          <Pressable
-            style={[styles.deleteListingButton, ownerActionLoading && styles.disabledControl]}
-            onPress={handleDeleteProperty}
-            disabled={ownerActionLoading}
-          >
-            <Text style={styles.deleteListingText}>Delete Listing</Text>
+          <Pressable style={styles.editListingButton} onPress={handleOpenEditProperty}>
+            <Text style={styles.editListingText}>Edit Property</Text>
           </Pressable>
         </>
       ) : null}
@@ -374,42 +387,41 @@ export default function PropertyDetailScreen({ route, navigation }) {
           onPress={isFavorite ? handleRemoveFavorite : handleAddFavorite}
           disabled={favoriteActionLoading}
         >
-          <Text style={styles.actionButtonEmoji}>❤️</Text>
           <Text style={styles.actionButtonLabel}>{isFavorite ? "Favorited" : "Favorite"}</Text>
         </Pressable>
 
-        <Pressable style={styles.actionButton} onPress={() => setInquiryModalVisible(true)}>
-          <Text style={styles.actionButtonEmoji}>💬</Text>
+        <Pressable style={styles.actionButton} onPress={openInquiryModal}>
           <Text style={styles.actionButtonLabel}>Inquiry</Text>
         </Pressable>
 
         <Pressable style={styles.actionButton} onPress={() => setAppointmentModalVisible(true)}>
-          <Text style={styles.actionButtonEmoji}>📅</Text>
           <Text style={styles.actionButtonLabel}>Appointment</Text>
         </Pressable>
       </View>
 
-      {Array.isArray(property.imageUrls) && property.imageUrls.length > 0 ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageRow}>
-          {property.imageUrls.map((url) => (
-            <Image key={url} source={{ uri: url }} style={styles.image} />
-          ))}
-        </ScrollView>
-      ) : null}
-
       <Text style={styles.sectionTitle}>Description</Text>
-      <Text style={styles.body}>{property.description}</Text>
+      <View style={styles.sectionCard}>
+        <Text style={styles.body}>{property.description}</Text>
+      </View>
 
       <Text style={styles.sectionTitle}>Details</Text>
-      <Text style={styles.body}>Type: {property.propertyType}</Text>
-      <Text style={styles.body}>Bedrooms: {property.bedrooms ?? 0}</Text>
-      <Text style={styles.body}>Bathrooms: {property.bathrooms ?? 0}</Text>
-      <Text style={styles.body}>Area Size: {property.areaSize ?? 0}</Text>
+      <View style={styles.sectionCard}>
+        <Text style={styles.body}>Type: {property.propertyType}</Text>
+        <Text style={styles.body}>Bedrooms: {property.bedrooms ?? 0}</Text>
+        <Text style={styles.body}>Bathrooms: {property.bathrooms ?? 0}</Text>
+        <Text style={styles.body}>Area Size: {property.areaSize ?? 0}</Text>
+      </View>
 
       {Array.isArray(property.features) && property.features.length > 0 ? (
         <>
-          <Text style={styles.sectionTitle}>Features</Text>
-          <Text style={styles.body}>{property.features.join(", ")}</Text>
+          <Text style={styles.sectionTitle}>Amenities</Text>
+          <View style={styles.amenitiesGrid}>
+            {property.features.map((feature, index) => (
+              <View key={index} style={styles.amenityItem}>
+                <Text style={styles.amenityText}>✓ {feature}</Text>
+              </View>
+            ))}
+          </View>
         </>
       ) : null}
 
@@ -434,20 +446,27 @@ export default function PropertyDetailScreen({ route, navigation }) {
       </Text>
       {reviewsError ? <Text style={styles.error}>{reviewsError}</Text> : null}
 
-      {reviews.length === 0 ? (
-        <Text style={styles.body}>No reviews yet.</Text>
-      ) : (
-        reviews.map((review) => (
-          <View key={review._id} style={styles.reviewCard}>
-            <Text style={styles.reviewAuthor}>{review.userId?.fullName || "Anonymous user"}</Text>
-            <Text style={styles.reviewStars}>{renderStars(review.rating)}</Text>
-            <Text style={styles.reviewComment}>{review.comment || "No comment provided."}</Text>
-          </View>
-        ))
-      )}
+      <View style={styles.sectionCard}>
+        {reviews.length === 0 ? (
+          <Text style={styles.body}>No reviews yet.</Text>
+        ) : (
+          reviews.map((review) => (
+            <View key={review._id} style={styles.reviewCard}>
+              <Text style={styles.reviewAuthor}>{review.userId?.fullName || "Anonymous user"}</Text>
+              <Text style={styles.reviewStars}>{renderStars(review.rating)}</Text>
+              <Text style={styles.reviewComment}>{review.comment || "No comment provided."}</Text>
+            </View>
+          ))
+        )}
+      </View>
 
       {/* Inquiry Modal */}
-      <Modal visible={inquiryModalVisible} transparent animationType="slide">
+      <Modal
+        visible={inquiryModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={closeInquiryModal}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Send Inquiry</Text>
@@ -456,6 +475,7 @@ export default function PropertyDetailScreen({ route, navigation }) {
               placeholder="Subject"
               value={inquirySubject}
               onChangeText={setInquirySubject}
+              accessibilityLabel="Inquiry subject"
             />
             <TextInput
               style={[styles.modalInput, styles.modalInputLarge]}
@@ -464,19 +484,35 @@ export default function PropertyDetailScreen({ route, navigation }) {
               numberOfLines={4}
               value={inquiryMessage}
               onChangeText={setInquiryMessage}
+              accessibilityLabel="Inquiry message"
             />
             <TextInput
               style={styles.modalInput}
               placeholder="Contact Number"
               keyboardType="phone-pad"
+              maxLength={10}
               value={inquiryContact}
-              onChangeText={setInquiryContact}
+              onChangeText={(text) => setInquiryContact(text.replace(/\D/g, "").slice(0, 10))}
+              autoComplete="tel"
+              textContentType="telephoneNumber"
+              accessibilityLabel="Contact number"
+              accessibilityHint="A 10-digit phone number for the property owner to reply to"
             />
             <View style={styles.modalButtons}>
-              <Pressable style={styles.cancelBtn} onPress={() => setInquiryModalVisible(false)}>
+              <Pressable
+                style={styles.cancelBtn}
+                onPress={closeInquiryModal}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel inquiry"
+              >
                 <Text style={styles.cancelText}>Cancel</Text>
               </Pressable>
-              <Pressable style={styles.submitBtn} onPress={handleSendInquiry}>
+              <Pressable
+                style={styles.submitBtn}
+                onPress={handleSendInquiry}
+                accessibilityRole="button"
+                accessibilityLabel="Send inquiry"
+              >
                 <Text style={styles.submitText}>Send</Text>
               </Pressable>
             </View>
@@ -485,7 +521,12 @@ export default function PropertyDetailScreen({ route, navigation }) {
       </Modal>
 
       {/* Appointment Modal */}
-      <Modal visible={appointmentModalVisible} transparent animationType="slide">
+      <Modal
+        visible={appointmentModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={closeAppointmentModal}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Book Appointment</Text>
@@ -531,12 +572,23 @@ export default function PropertyDetailScreen({ route, navigation }) {
               placeholder="Purpose (e.g., Property viewing)"
               value={appointmentPurpose}
               onChangeText={setAppointmentPurpose}
+              accessibilityLabel="Appointment purpose"
             />
             <View style={styles.modalButtons}>
-              <Pressable style={styles.cancelBtn} onPress={() => setAppointmentModalVisible(false)}>
+              <Pressable
+                style={styles.cancelBtn}
+                onPress={closeAppointmentModal}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel appointment"
+              >
                 <Text style={styles.cancelText}>Cancel</Text>
               </Pressable>
-              <Pressable style={styles.submitBtn} onPress={handleBookAppointment}>
+              <Pressable
+                style={styles.submitBtn}
+                onPress={handleBookAppointment}
+                accessibilityRole="button"
+                accessibilityLabel="Book appointment"
+              >
                 <Text style={styles.submitText}>Book</Text>
               </Pressable>
             </View>
@@ -550,36 +602,37 @@ export default function PropertyDetailScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f7fa"
+    backgroundColor: estavaCore.colors.background
   },
   content: {
-    padding: 16
+    padding: 16,
+    paddingBottom: 24
   },
   centered: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f5f7fa",
+    backgroundColor: estavaCore.colors.background,
     padding: 16
   },
   title: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#111827"
+    color: estavaCore.colors.primary
   },
   location: {
     marginTop: 8,
-    color: "#4b5563"
+    color: estavaCore.colors.textSecondary
   },
   price: {
     marginTop: 8,
     fontSize: 20,
     fontWeight: "800",
-    color: "#1d4ed8"
+    color: estavaCore.colors.accent
   },
   status: {
     marginTop: 8,
-    color: "#4b5563"
+    color: estavaCore.colors.textSecondary
   },
   ownerHint: {
     color: "#6b7280",
@@ -592,13 +645,13 @@ const styles = StyleSheet.create({
     marginBottom: 12
   },
   statusChip: {
-    backgroundColor: "#e5e7eb",
+    backgroundColor: estavaCore.colors.surfaceMuted,
     borderRadius: 16,
     paddingVertical: 7,
     paddingHorizontal: 12
   },
   statusChipActive: {
-    backgroundColor: "#1d4ed8"
+    backgroundColor: estavaCore.colors.primary
   },
   statusChipText: {
     color: "#374151",
@@ -607,17 +660,30 @@ const styles = StyleSheet.create({
   statusChipTextActive: {
     color: "#ffffff"
   },
-  deleteListingButton: {
-    backgroundColor: "#fee2e2",
-    borderColor: "#ef4444",
+  editListingButton: {
+    backgroundColor: estavaCore.colors.accentSoft,
+    borderColor: estavaCore.colors.accent,
     borderWidth: 1,
     borderRadius: 8,
     paddingVertical: 10,
     alignItems: "center",
     marginBottom: 6
   },
-  deleteListingText: {
-    color: "#b91c1c",
+  editListingText: {
+    color: estavaCore.colors.accent,
+    fontWeight: "700"
+  },
+  addPhotosButton: {
+    backgroundColor: "#dbeafe",
+    borderColor: "#1d4ed8",
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: "center",
+    marginBottom: 6
+  },
+  addPhotosText: {
+    color: "#1d4ed8",
     fontWeight: "700"
   },
   disabledControl: {
@@ -632,47 +698,85 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: estavaCore.colors.surface,
     borderWidth: 1,
-    borderColor: "#d1d5db",
+    borderColor: estavaCore.colors.border,
     borderRadius: 8,
+    minHeight: 44,
     paddingVertical: 12,
     paddingHorizontal: 8,
     alignItems: "center",
     justifyContent: "center"
   },
   actionButtonActive: {
-    backgroundColor: "#dbeafe",
-    borderColor: "#1d4ed8"
-  },
-  actionButtonEmoji: {
-    fontSize: 20,
-    marginBottom: 4
+    backgroundColor: estavaCore.colors.accentSoft,
+    borderColor: estavaCore.colors.accent
   },
   actionButtonLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "600",
-    color: "#374151"
+    color: estavaCore.colors.textPrimary
   },
   imageRow: {
-    marginTop: 16
+    marginBottom: 12
   },
   image: {
-    width: 220,
-    height: 140,
+    width: 292,
+    height: 204,
     borderRadius: 12,
     marginRight: 10,
-    backgroundColor: "#d1d5db"
+    backgroundColor: estavaCore.colors.surfaceMuted
+  },
+  imageEmpty: {
+    marginBottom: 12,
+    height: 204,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
+    backgroundColor: estavaCore.colors.surfaceMuted,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  imageEmptyText: {
+    color: estavaCore.colors.textSecondary,
+    fontWeight: "600"
+  },
+  sectionCard: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
+    backgroundColor: estavaCore.colors.surface,
+    padding: 12,
+    ...estavaCore.shadow.card
+  },
+  amenitiesGrid: {
+    backgroundColor: estavaCore.colors.surface,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 6
+  },
+  amenityItem: {
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f3f4f6"
+  },
+  amenityText: {
+    color: "#374151",
+    fontSize: 14,
+    fontWeight: "500"
   },
   sectionTitle: {
     marginTop: 20,
     marginBottom: 8,
     fontSize: 16,
     fontWeight: "700",
-    color: "#111827"
+    color: estavaCore.colors.primary
   },
   body: {
-    color: "#374151",
+    color: estavaCore.colors.textSecondary,
     lineHeight: 22
   },
   reviewSummary: {
@@ -682,7 +786,7 @@ const styles = StyleSheet.create({
   },
   reviewShortcutButton: {
     alignSelf: "flex-start",
-    backgroundColor: "#1d4ed8",
+    backgroundColor: estavaCore.colors.primary,
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 12,
@@ -693,15 +797,18 @@ const styles = StyleSheet.create({
     fontWeight: "700"
   },
   reviewCard: {
-    backgroundColor: "#ffffff",
+    backgroundColor: estavaCore.colors.surface,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: estavaCore.colors.border,
     borderRadius: 10,
     padding: 12,
-    marginBottom: 10
+    marginBottom: 10,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: estavaCore.colors.border
   },
   reviewAuthor: {
-    color: "#111827",
+    color: estavaCore.colors.textPrimary,
     fontWeight: "700"
   },
   reviewStars: {
@@ -714,7 +821,7 @@ const styles = StyleSheet.create({
     color: "#374151"
   },
   error: {
-    color: "#b91c1c",
+    color: estavaCore.colors.danger,
     textAlign: "center"
   },
   modalOverlay: {
@@ -723,7 +830,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.3)"
   },
   modalContent: {
-    backgroundColor: "#fff",
+    backgroundColor: estavaCore.colors.surface,
     padding: 16,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16
@@ -735,7 +842,7 @@ const styles = StyleSheet.create({
   },
   modalInput: {
     borderWidth: 1,
-    borderColor: "#d1d5db",
+    borderColor: estavaCore.colors.border,
     borderRadius: 8,
     padding: 10,
     marginBottom: 12,
@@ -751,6 +858,7 @@ const styles = StyleSheet.create({
     marginTop: 16
   },
   cancelBtn: {
+    minHeight: 44,
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
@@ -761,10 +869,11 @@ const styles = StyleSheet.create({
     fontWeight: "600"
   },
   submitBtn: {
+    minHeight: 44,
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
-    backgroundColor: "#1d4ed8"
+    backgroundColor: estavaCore.colors.primary
   },
   submitText: {
     color: "#fff",
@@ -772,8 +881,9 @@ const styles = StyleSheet.create({
   },
   pickerButton: {
     borderWidth: 1,
-    borderColor: "#d1d5db",
+    borderColor: estavaCore.colors.border,
     borderRadius: 8,
+    minHeight: 44,
     padding: 10,
     marginBottom: 12,
     backgroundColor: "#fff"

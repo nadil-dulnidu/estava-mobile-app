@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { appointmentApi } from "../api/appointmentApi";
+import { estavaCore } from "../theme/estavaCore";
 
 const STATUS_OPTIONS = [
   { label: "Pending", value: "pending" },
@@ -270,11 +271,12 @@ export default function AppointmentsScreen({ navigation }) {
     );
   };
 
-  if (loading) return <ActivityIndicator style={{ marginTop: 20 }} size="large" />;
+  if (loading) return <ActivityIndicator style={{ marginTop: 20 }} size="large" color={estavaCore.colors.accent} />;
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>My Appointments</Text>
+      <Text style={styles.subtitle}>Track visits, update status, and manage your schedule.</Text>
       {!!error && <Text style={styles.error}>{error}</Text>}
       <Pressable style={styles.bookButton} onPress={() => navigation.navigate("PropertyList")}>
         <Text style={styles.bookButtonText}>+ Book from Properties</Text>
@@ -439,12 +441,13 @@ export default function AppointmentsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: "#f5f7fa" },
-  title: { fontSize: 24, fontWeight: "700", marginBottom: 16, color: "#1f2937" },
-  error: { color: "#b91c1c", marginBottom: 8 },
-  emptyText: { textAlign: "center", color: "#6b7280", marginTop: 20 },
+  container: { flex: 1, padding: 16, backgroundColor: estavaCore.colors.background },
+  title: { fontSize: 24, fontWeight: "700", marginBottom: 4, color: estavaCore.colors.primary },
+  subtitle: { color: estavaCore.colors.textSecondary, marginBottom: 14 },
+  error: { color: estavaCore.colors.danger, marginBottom: 8 },
+  emptyText: { textAlign: "center", color: estavaCore.colors.textSecondary, marginTop: 20 },
   bookButton: {
-    backgroundColor: "#1d4ed8",
+    backgroundColor: estavaCore.colors.primary,
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 16,
@@ -452,16 +455,17 @@ const styles = StyleSheet.create({
   },
   bookButtonText: { color: "#fff", fontWeight: "700", textAlign: "center" },
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: estavaCore.colors.surface,
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#e5e7eb"
+    borderColor: estavaCore.colors.border,
+    ...estavaCore.shadow.card
   },
-  property: { fontSize: 16, fontWeight: "600" },
-  date: { fontSize: 14, color: "#374151", marginTop: 6 },
-  time: { fontSize: 14, color: "#374151", marginTop: 4 },
+  property: { fontSize: 16, fontWeight: "600", color: estavaCore.colors.textPrimary },
+  date: { fontSize: 14, color: estavaCore.colors.textSecondary, marginTop: 6 },
+  time: { fontSize: 14, color: estavaCore.colors.textSecondary, marginTop: 4 },
   status: { fontSize: 12, fontWeight: "700", marginTop: 6 },
   actionRow: {
     flexDirection: "row",
@@ -472,41 +476,41 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: "#dbeafe",
+    backgroundColor: estavaCore.colors.accentSoft,
     alignItems: "center"
   },
   editButtonText: {
-    color: "#1d4ed8",
+    color: estavaCore.colors.accent,
     fontWeight: "700"
   },
   cancelButton: {
     flex: 1,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: "#fee2e2",
+    backgroundColor: estavaCore.colors.dangerSoft,
     alignItems: "center"
   },
-  cancelText: { color: "#b91c1c", fontWeight: "700" },
+  cancelText: { color: estavaCore.colors.danger, fontWeight: "700" },
   hideButton: {
     flex: 1,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: "#fef3c7",
+    backgroundColor: estavaCore.colors.warningSoft,
     alignItems: "center"
   },
-  hideText: { color: "#92400e", fontWeight: "700" },
+  hideText: { color: estavaCore.colors.warning, fontWeight: "700" },
   deleteButton: {
     flex: 1,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: "#fee2e2",
+    backgroundColor: estavaCore.colors.dangerSoft,
     alignItems: "center"
   },
-  deleteText: { color: "#b91c1c", fontWeight: "700" },
+  deleteText: { color: estavaCore.colors.danger, fontWeight: "700" },
   noteText: {
     marginTop: 8,
     fontSize: 12,
-    color: "#6b7280"
+    color: estavaCore.colors.textSecondary
   },
   modalOverlay: {
     flex: 1,
@@ -514,7 +518,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.3)"
   },
   modalContent: {
-    backgroundColor: "#fff",
+    backgroundColor: estavaCore.colors.surface,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     padding: 16
@@ -523,29 +527,22 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     marginBottom: 12,
-    color: "#111827"
+    color: estavaCore.colors.primary
   },
   pickerButton: {
     borderWidth: 1,
-    borderColor: "#d1d5db",
+    borderColor: estavaCore.colors.border,
     borderRadius: 8,
     padding: 10,
     marginBottom: 10,
-    backgroundColor: "#fff"
+    backgroundColor: estavaCore.colors.surface
   },
-  pickerLabel: {
-    color: "#6b7280",
-    fontSize: 12
-  },
-  pickerValue: {
-    marginTop: 4,
-    color: "#111827",
-    fontWeight: "600"
-  },
+  pickerLabel: { color: estavaCore.colors.textSecondary, fontSize: 12 },
+  pickerValue: { marginTop: 4, color: estavaCore.colors.textPrimary, fontWeight: "600" },
   statusLabel: {
     marginTop: 6,
     marginBottom: 8,
-    color: "#1f2937",
+    color: estavaCore.colors.textPrimary,
     fontWeight: "700"
   },
   statusOptionsRow: {
@@ -556,20 +553,17 @@ const styles = StyleSheet.create({
   statusChip: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "#d1d5db",
+    borderColor: estavaCore.colors.border,
     borderRadius: 20,
     paddingVertical: 8,
     alignItems: "center",
-    backgroundColor: "#fff"
+    backgroundColor: estavaCore.colors.surface
   },
   statusChipActive: {
-    borderColor: "#1d4ed8",
-    backgroundColor: "#1d4ed8"
+    borderColor: estavaCore.colors.primary,
+    backgroundColor: estavaCore.colors.primary
   },
-  statusChipText: {
-    color: "#374151",
-    fontWeight: "600"
-  },
+  statusChipText: { color: estavaCore.colors.textSecondary, fontWeight: "600" },
   statusChipTextActive: {
     color: "#fff"
   },
@@ -582,18 +576,18 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     borderRadius: 8,
-    backgroundColor: "#e5e7eb",
+    backgroundColor: estavaCore.colors.surfaceMuted,
     alignItems: "center"
   },
   modalCancelText: {
-    color: "#374151",
+    color: estavaCore.colors.textPrimary,
     fontWeight: "600"
   },
   modalSaveButton: {
     flex: 1,
     paddingVertical: 10,
     borderRadius: 8,
-    backgroundColor: "#1d4ed8",
+    backgroundColor: estavaCore.colors.primary,
     alignItems: "center"
   },
   modalSaveText: {

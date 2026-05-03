@@ -8,6 +8,10 @@ Base URL: /api
 | --- | --- | --- | --- | --- |
 | POST | /auth/register | No | Public | Register user with fullName, email, password, role |
 | POST | /auth/login | No | Public | Login with email/password |
+| GET | /auth/profile | Yes | any authenticated | Fetch signed-in user profile |
+| PATCH | /auth/profile | Yes | any authenticated | Update profile fields such as full name and phone |
+| PATCH | /auth/change-password | Yes | any authenticated | Change password with current and new password values |
+| PATCH | /auth/profile/avatar | Yes | any authenticated | Upload or replace profile avatar image |
 
 ## Health
 

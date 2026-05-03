@@ -50,6 +50,7 @@ Health check: `GET /api/health`
 
 ## Current Module Behavior (Phase 3)
 
+- User profile management is available from the home screen avatar entry, with name, password, phone, and avatar updates, plus inquiry phone autofill from saved profile data.
 - Properties support CRUD with owner/admin guardrails and `listingStatus` values `available`, `sold`, `rented`, and `delisted`.
 - Delisted properties are hidden from buyer/public views, while owners can still view and manage their own delisted listings.
 - Property creation supports `features` input, and the properties screen includes a top "Post Property" CTA.
@@ -132,7 +133,7 @@ Notes:
 
 ## Next Build Steps
 
-1. Add role-aware `GET /api/auth/me` and profile management.
+1. Add integration tests for auth profile and avatar flows.
 2. Add integration tests for CRUD flows and role-restricted update/delete paths.
 3. Expand mobile UX for loading, empty, and error states across all module screens.
 4. Finalize staging/production deployment validation for hosted backend + mobile connectivity.

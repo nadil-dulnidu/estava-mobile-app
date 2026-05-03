@@ -13,6 +13,8 @@ import {
 } from "react-native";
 import { inquiryApi } from "../api/inquiryApi";
 import { useAuth } from "../context/AuthContext";
+import { isTenDigitPhoneNumber, normalizePhoneNumber } from "../utils/phoneNumber";
+import { estavaCore } from "../theme/estavaCore";
 
 const getApiErrorMessage = (error, fallbackMessage) => {
   return error?.response?.data?.message || error?.message || fallbackMessage;
@@ -40,9 +42,9 @@ const getInquiryStatus = (inquiry) => {
 };
 
 const getStatusColor = (status) => {
-  if (status === "replied") return "#059669";
-  if (status === "closed") return "#6b7280";
-  return "#d97706";
+  if (status === "replied") return estavaCore.colors.accent;
+  if (status === "closed") return estavaCore.colors.textSecondary;
+  return "#a16207";
 };
 
 const toStatusLabel = (status) => {
@@ -63,12 +65,14 @@ export default function InquiriesScreen() {
   const [responseMode, setResponseMode] = useState("create");
   const [responseInquiry, setResponseInquiry] = useState(null);
   const [responseMessage, setResponseMessage] = useState("");
+  const [responseError, setResponseError] = useState("");
 
   const [editInquiryModalVisible, setEditInquiryModalVisible] = useState(false);
   const [editInquiry, setEditInquiry] = useState(null);
   const [editSubject, setEditSubject] = useState("");
   const [editMessage, setEditMessage] = useState("");
   const [editContact, setEditContact] = useState("");
+  const [editInquiryError, setEditInquiryError] = useState("");
 
   useEffect(() => {
     loadInquiries();
@@ -92,7 +96,7 @@ export default function InquiriesScreen() {
     setResponseInquiry(item);
     setResponseMode(hasResponse ? "edit" : "create");
     setResponseMessage(toSafeString(item?.responseMessage));
-    setError("");
+    setResponseError("");
     setResponseModalVisible(true);
   };
 
@@ -100,25 +104,26 @@ export default function InquiriesScreen() {
     setResponseModalVisible(false);
     setResponseInquiry(null);
     setResponseMessage("");
+    setResponseError("");
   };
 
   const onSaveResponse = async () => {
     const nextResponse = toSafeString(responseMessage).trim();
     if (nextResponse.length < 3) {
-      setError("Response must be at least 3 characters");
+      setResponseError("Response must be at least 3 characters");
       return;
     }
 
     if (!responseInquiry?._id) return;
 
     setActionLoading(true);
-    setError("");
+    setResponseError("");
     try {
       await inquiryApi.saveInquiryResponse(responseInquiry._id, nextResponse);
       closeResponseModal();
       await loadInquiries();
     } catch (err) {
-      setError(getApiErrorMessage(err, "Failed to save response"));
+      setResponseError(getApiErrorMessage(err, "Failed to save response"));
     } finally {
       setActionLoading(false);
     }
@@ -150,8 +155,9 @@ export default function InquiriesScreen() {
     setEditInquiry(item);
     setEditSubject(toSafeString(item?.subject));
     setEditMessage(toSafeString(item?.message));
-    setEditContact(toSafeString(item?.contactNumber));
-    setError("");
+    const fallbackPhone = toSafeString(item?.contactNumber) || toSafeString(user?.phoneNumber);
+    setEditContact(normalizePhoneNumber(fallbackPhone));
+    setEditInquiryError("");
     setEditInquiryModalVisible(true);
   };
 
@@ -161,6 +167,7 @@ export default function InquiriesScreen() {
     setEditSubject("");
     setEditMessage("");
     setEditContact("");
+    setEditInquiryError("");
   };
 
   const onSaveInquiryEdits = async () => {
@@ -169,34 +176,34 @@ export default function InquiriesScreen() {
     const contactNumber = toSafeString(editContact).trim();
 
     if (subject.length < 3 || subject.length > 160) {
-      setError("Subject must be between 3 and 160 characters");
+      setEditInquiryError("Subject must be between 3 and 160 characters");
       return;
     }
 
     if (message.length < 10 || message.length > 3000) {
-      setError("Message must be between 10 and 3000 characters");
+      setEditInquiryError("Message must be between 10 and 3000 characters");
       return;
     }
 
-    if (contactNumber.length > 40) {
-      setError("Contact number must be 40 characters or less");
+    if (!isTenDigitPhoneNumber(contactNumber)) {
+      setEditInquiryError("Contact number must be exactly 10 digits");
       return;
     }
 
     if (!editInquiry?._id) return;
 
     setActionLoading(true);
-    setError("");
+    setEditInquiryError("");
     try {
       await inquiryApi.updateInquiryDetails(editInquiry._id, {
         subject,
         message,
-        contactNumber
+        contactNumber: normalizePhoneNumber(contactNumber)
       });
       closeEditInquiryModal();
       await loadInquiries();
     } catch (err) {
-      setError(getApiErrorMessage(err, "Failed to update inquiry"));
+      setEditInquiryError(getApiErrorMessage(err, "Failed to update inquiry"));
     } finally {
       setActionLoading(false);
     }
@@ -204,12 +211,12 @@ export default function InquiriesScreen() {
 
   const onDeleteInquiry = (item) => {
     Alert.alert(
-      "Delete inquiry",
-      "Are you sure you want to delete this inquiry?",
+      "Hide inquiry",
+      "This removes the inquiry from your view. It will be permanently deleted only after both participants hide it.",
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Delete",
+          text: "Hide",
           style: "destructive",
           onPress: async () => {
             setActionLoading(true);
@@ -218,7 +225,7 @@ export default function InquiriesScreen() {
               await inquiryApi.removeInquiry(item._id);
               await loadInquiries();
             } catch (err) {
-              setError(getApiErrorMessage(err, "Failed to delete inquiry"));
+              setError(getApiErrorMessage(err, "Failed to hide inquiry"));
             } finally {
               setActionLoading(false);
             }
@@ -234,7 +241,13 @@ export default function InquiriesScreen() {
   const filtered = activeTab === "incoming" ? incoming : sent;
   const isEditingResponse = responseMode === "edit";
 
-  if (loading) return <ActivityIndicator style={{ marginTop: 20 }} size="large" />;
+  if (loading) {
+    return (
+      <View style={styles.loadingWrap}>
+        <ActivityIndicator style={{ marginTop: 20 }} size="large" color={estavaCore.colors.accent} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -245,6 +258,9 @@ export default function InquiriesScreen() {
         <Pressable
           style={[styles.tabButton, activeTab === "incoming" && styles.tabButtonActive]}
           onPress={() => setActiveTab("incoming")}
+          accessibilityRole="button"
+          accessibilityLabel={`Incoming inquiries tab, ${incoming.length} items`}
+          accessibilityHint="Shows inquiries received from buyers and renters"
         >
           <Text style={[styles.tabText, activeTab === "incoming" && styles.tabTextActive]}>
             Incoming ({incoming.length})
@@ -253,6 +269,9 @@ export default function InquiriesScreen() {
         <Pressable
           style={[styles.tabButton, activeTab === "sent" && styles.tabButtonActive]}
           onPress={() => setActiveTab("sent")}
+          accessibilityRole="button"
+          accessibilityLabel={`Sent inquiries tab, ${sent.length} items`}
+          accessibilityHint="Shows inquiries you have sent to property owners"
         >
           <Text style={[styles.tabText, activeTab === "sent" && styles.tabTextActive]}>
             Sent ({sent.length})
@@ -298,6 +317,9 @@ export default function InquiriesScreen() {
                         style={styles.actionPrimary}
                         onPress={() => openResponseModal(item)}
                         disabled={actionLoading}
+                        accessibilityRole="button"
+                        accessibilityLabel={hasResponse ? "Edit response" : "Create response"}
+                        accessibilityHint="Opens a modal to write a seller response"
                       >
                         <Text style={styles.actionPrimaryText}>
                           {hasResponse ? "Edit Response" : "Create Response"}
@@ -308,10 +330,23 @@ export default function InquiriesScreen() {
                           style={styles.actionDanger}
                           onPress={() => onClearResponse(item)}
                           disabled={actionLoading}
+                          accessibilityRole="button"
+                          accessibilityLabel="Clear response"
+                          accessibilityHint="Removes the current seller response from this inquiry"
                         >
                           <Text style={styles.actionDangerText}>Clear Response</Text>
                         </Pressable>
                       ) : null}
+                      <Pressable
+                        style={styles.actionDanger}
+                        onPress={() => onDeleteInquiry(item)}
+                        disabled={actionLoading}
+                        accessibilityRole="button"
+                        accessibilityLabel="Hide inquiry"
+                        accessibilityHint="Removes this inquiry from your view"
+                      >
+                        <Text style={styles.actionDangerText}>Hide Inquiry</Text>
+                      </Pressable>
                     </>
                   ) : (
                     <>
@@ -319,25 +354,25 @@ export default function InquiriesScreen() {
                         style={styles.actionSecondary}
                         onPress={() => openEditInquiryModal(item)}
                         disabled={actionLoading}
+                        accessibilityRole="button"
+                        accessibilityLabel="Edit inquiry"
+                        accessibilityHint="Opens a modal to update the inquiry details"
                       >
                         <Text style={styles.actionSecondaryText}>Edit Inquiry</Text>
                       </Pressable>
-                      {hasResponse ? (
-                        <Pressable
-                          style={styles.actionDanger}
-                          onPress={() => onDeleteInquiry(item)}
-                          disabled={actionLoading}
-                        >
-                          <Text style={styles.actionDangerText}>Delete Inquiry</Text>
-                        </Pressable>
-                      ) : null}
+                      <Pressable
+                        style={styles.actionDanger}
+                        onPress={() => onDeleteInquiry(item)}
+                        disabled={actionLoading}
+                        accessibilityRole="button"
+                        accessibilityLabel="Hide inquiry"
+                        accessibilityHint="Removes this inquiry from your view"
+                      >
+                        <Text style={styles.actionDangerText}>Hide Inquiry</Text>
+                      </Pressable>
                     </>
                   )}
                 </View>
-
-                {!isIncoming && !hasResponse ? (
-                  <Text style={styles.actionHint}>Delete is available after a seller response.</Text>
-                ) : null}
               </View>
             );
           }}
@@ -359,16 +394,30 @@ export default function InquiriesScreen() {
               multiline
               numberOfLines={4}
               value={responseMessage}
-              onChangeText={setResponseMessage}
+              onChangeText={(text) => {
+                setResponseMessage(text);
+                if (responseError) setResponseError("");
+              }}
+              accessibilityLabel="Response message"
+              accessibilityHint="Type the reply that will be visible to the inquiry sender"
             />
+            {responseError ? <Text style={styles.modalError}>{responseError}</Text> : null}
             <View style={styles.modalButtons}>
-              <Pressable style={styles.cancelBtn} onPress={closeResponseModal} disabled={actionLoading}>
+              <Pressable
+                style={styles.cancelBtn}
+                onPress={closeResponseModal}
+                disabled={actionLoading}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel response"
+              >
                 <Text style={styles.cancelText}>Cancel</Text>
               </Pressable>
               <Pressable
                 style={[styles.submitBtn, actionLoading && styles.submitBtnDisabled]}
                 onPress={onSaveResponse}
                 disabled={actionLoading}
+                accessibilityRole="button"
+                accessibilityLabel={isEditingResponse ? "Save response" : "Send response"}
               >
                 <Text style={styles.submitText}>{isEditingResponse ? "Save Response" : "Send Response"}</Text>
               </Pressable>
@@ -390,8 +439,13 @@ export default function InquiriesScreen() {
               style={styles.modalInput}
               placeholder="Subject"
               value={editSubject}
-              onChangeText={setEditSubject}
+              onChangeText={(text) => {
+                setEditSubject(text);
+                if (editInquiryError) setEditInquiryError("");
+              }}
               maxLength={160}
+              accessibilityLabel="Inquiry subject"
+              accessibilityHint="Update the short subject line for this inquiry"
             />
             <TextInput
               style={[styles.modalInput, styles.modalInputLarge]}
@@ -399,25 +453,46 @@ export default function InquiriesScreen() {
               multiline
               numberOfLines={4}
               value={editMessage}
-              onChangeText={setEditMessage}
+              onChangeText={(text) => {
+                setEditMessage(text);
+                if (editInquiryError) setEditInquiryError("");
+              }}
               maxLength={3000}
+              accessibilityLabel="Inquiry message"
+              accessibilityHint="Update the main message sent with the inquiry"
             />
             <TextInput
               style={styles.modalInput}
               placeholder="Contact Number"
               keyboardType="phone-pad"
+              maxLength={10}
               value={editContact}
-              onChangeText={setEditContact}
-              maxLength={40}
+              onChangeText={(text) => {
+                setEditContact(normalizePhoneNumber(text));
+                if (editInquiryError) setEditInquiryError("");
+              }}
+              autoComplete="tel"
+              textContentType="telephoneNumber"
+              accessibilityLabel="Contact number"
+              accessibilityHint="Use a 10-digit phone number for replies"
             />
+            {editInquiryError ? <Text style={styles.modalError}>{editInquiryError}</Text> : null}
             <View style={styles.modalButtons}>
-              <Pressable style={styles.cancelBtn} onPress={closeEditInquiryModal} disabled={actionLoading}>
+              <Pressable
+                style={styles.cancelBtn}
+                onPress={closeEditInquiryModal}
+                disabled={actionLoading}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel edit"
+              >
                 <Text style={styles.cancelText}>Cancel</Text>
               </Pressable>
               <Pressable
                 style={[styles.submitBtn, actionLoading && styles.submitBtnDisabled]}
                 onPress={onSaveInquiryEdits}
                 disabled={actionLoading}
+                accessibilityRole="button"
+                accessibilityLabel="Save inquiry edits"
               >
                 <Text style={styles.submitText}>Save Inquiry</Text>
               </Pressable>
@@ -430,43 +505,52 @@ export default function InquiriesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: "#f5f7fa" },
-  title: { fontSize: 24, fontWeight: "700", marginBottom: 16, color: "#1f2937" },
-  error: { color: "#b91c1c", marginBottom: 8 },
-  emptyText: { textAlign: "center", color: "#6b7280", marginTop: 20 },
+  loadingWrap: {
+    flex: 1,
+    backgroundColor: estavaCore.colors.background
+  },
+  container: { flex: 1, padding: 16, backgroundColor: estavaCore.colors.background },
+  title: { fontSize: 24, fontWeight: "700", marginBottom: 16, color: estavaCore.colors.primary },
+  error: { color: estavaCore.colors.danger, marginBottom: 8 },
+  emptyText: { textAlign: "center", color: estavaCore.colors.textSecondary, marginTop: 20 },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 8,
+    backgroundColor: estavaCore.colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
     padding: 12,
     marginBottom: 12
   },
-  subject: { fontSize: 16, fontWeight: "600" },
-  property: { fontSize: 12, color: "#6b7280", marginBottom: 4 },
-  message: { fontSize: 14, color: "#374151", marginTop: 6 },
-  contact: { fontSize: 12, color: "#6b7280", marginTop: 4 },
+  subject: { fontSize: 16, fontWeight: "600", color: estavaCore.colors.textPrimary },
+  property: { fontSize: 12, color: estavaCore.colors.textSecondary, marginBottom: 4 },
+  message: { fontSize: 14, color: estavaCore.colors.textPrimary, marginTop: 6 },
+  contact: { fontSize: 12, color: estavaCore.colors.textSecondary, marginTop: 4 },
   status: { fontSize: 12, fontWeight: "600", marginTop: 4 },
   tabsRow: { flexDirection: "row", gap: 10, marginBottom: 12 },
   tabButton: {
     flex: 1,
-    backgroundColor: "#e5e7eb",
-    borderRadius: 8,
+    backgroundColor: estavaCore.colors.surfaceMuted,
+    borderRadius: 10,
+    minHeight: 44,
     paddingVertical: 10,
-    alignItems: "center"
+    alignItems: "center",
+    justifyContent: "center"
   },
-  tabButtonActive: { backgroundColor: "#1d4ed8" },
-  tabText: { fontWeight: "600", color: "#374151" },
-  tabTextActive: { color: "#fff" },
+  tabButtonActive: { backgroundColor: estavaCore.colors.primary },
+  tabText: { fontWeight: "600", color: estavaCore.colors.textSecondary },
+  tabTextActive: { color: estavaCore.colors.surface },
   responseBox: {
     marginTop: 8,
     padding: 8,
     borderRadius: 8,
-    backgroundColor: "#eff6ff",
+    backgroundColor: estavaCore.colors.accentSoft,
     borderWidth: 1,
-    borderColor: "#bfdbfe"
+    borderColor: estavaCore.colors.border,
+    marginBottom: 4
   },
-  responseLabel: { fontSize: 12, fontWeight: "700", color: "#1e40af" },
-  responseText: { marginTop: 4, color: "#1f2937" },
-  responseDate: { marginTop: 4, fontSize: 12, color: "#4b5563" },
+  responseLabel: { fontSize: 12, fontWeight: "700", color: estavaCore.colors.accent },
+  responseText: { marginTop: 4, color: estavaCore.colors.textPrimary },
+  responseDate: { marginTop: 4, fontSize: 12, color: estavaCore.colors.textSecondary },
   actionsRow: {
     marginTop: 8,
     flexDirection: "row",
@@ -474,44 +558,50 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   actionPrimary: {
-    backgroundColor: "#1d4ed8",
+    backgroundColor: estavaCore.colors.primary,
     borderRadius: 8,
-    paddingVertical: 8,
+    minHeight: 44,
+    paddingVertical: 10,
     paddingHorizontal: 10,
     marginRight: 8,
-    marginBottom: 8
+    marginBottom: 8,
+    justifyContent: "center"
   },
   actionPrimaryText: { color: "#fff", fontWeight: "700", fontSize: 12 },
   actionSecondary: {
-    backgroundColor: "#e5e7eb",
+    backgroundColor: estavaCore.colors.surfaceMuted,
     borderRadius: 8,
-    paddingVertical: 8,
+    minHeight: 44,
+    paddingVertical: 10,
     paddingHorizontal: 10,
     marginRight: 8,
-    marginBottom: 8
+    marginBottom: 8,
+    justifyContent: "center"
   },
-  actionSecondaryText: { color: "#374151", fontWeight: "700", fontSize: 12 },
+  actionSecondaryText: { color: estavaCore.colors.textPrimary, fontWeight: "700", fontSize: 12 },
   actionDanger: {
-    backgroundColor: "#fee2e2",
+    backgroundColor: estavaCore.colors.dangerSoft,
     borderRadius: 8,
-    paddingVertical: 8,
+    minHeight: 44,
+    paddingVertical: 10,
     paddingHorizontal: 10,
     marginRight: 8,
-    marginBottom: 8
+    marginBottom: 8,
+    justifyContent: "center"
   },
-  actionDangerText: { color: "#b91c1c", fontWeight: "700", fontSize: 12 },
-  actionHint: { color: "#6b7280", fontSize: 12, marginTop: 2 },
+  actionDangerText: { color: estavaCore.colors.danger, fontWeight: "700", fontSize: 12 },
+  actionHint: { color: estavaCore.colors.textSecondary, fontSize: 12, marginTop: 2 },
   modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.3)" },
   modalContent: {
-    backgroundColor: "#fff",
+    backgroundColor: estavaCore.colors.surface,
     padding: 16,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18
   },
   modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12 },
   modalInput: {
     borderWidth: 1,
-    borderColor: "#d1d5db",
+    borderColor: estavaCore.colors.border,
     borderRadius: 8,
     padding: 10,
     marginBottom: 12
@@ -522,20 +612,28 @@ const styles = StyleSheet.create({
   },
   modalButtons: { flexDirection: "row", justifyContent: "space-around" },
   cancelBtn: {
+    minHeight: 44,
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
-    backgroundColor: "#e5e7eb"
+    backgroundColor: estavaCore.colors.surfaceMuted
   },
-  cancelText: { color: "#374151", fontWeight: "600" },
+  cancelText: { color: estavaCore.colors.textPrimary, fontWeight: "600" },
   submitBtn: {
+    minHeight: 44,
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
-    backgroundColor: "#1d4ed8"
+    backgroundColor: estavaCore.colors.primary
   },
   submitBtnDisabled: {
     opacity: 0.5
   },
-  submitText: { color: "#fff", fontWeight: "600" }
+  submitText: { color: "#fff", fontWeight: "600" },
+  modalError: {
+    color: estavaCore.colors.danger,
+    marginTop: -4,
+    marginBottom: 10,
+    fontWeight: "600"
+  }
 });

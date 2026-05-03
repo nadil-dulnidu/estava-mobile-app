@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
 import { useAuth } from "../context/AuthContext";
+import { estavaCore } from "../theme/estavaCore";
 
 export default function LoginScreen({ navigation }) {
   const { login, loading } = useAuth();
@@ -30,7 +31,9 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome Back</Text>
+      <Text style={styles.kicker}>Estava Real Estate</Text>
+      <Text style={styles.title}>Welcome back</Text>
+      <Text style={styles.subtitle}>Sign in to manage listings, inquiries, and visits.</Text>
       <TextInput
         style={styles.input}
         placeholder="Email"
@@ -62,25 +65,38 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     padding: 20,
-    backgroundColor: "#f5f7fa"
+    backgroundColor: estavaCore.colors.background
+  },
+  kicker: {
+    color: estavaCore.colors.accent,
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+    marginBottom: 6
   },
   title: {
     fontSize: 26,
     fontWeight: "700",
-    marginBottom: 20,
-    color: "#1f2937"
+    color: estavaCore.colors.primary
+  },
+  subtitle: {
+    marginTop: 6,
+    marginBottom: 18,
+    color: estavaCore.colors.textSecondary,
+    lineHeight: 20
   },
   input: {
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
+    backgroundColor: estavaCore.colors.surface,
+    borderRadius: 8,
     padding: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#d1d5db"
+    borderColor: estavaCore.colors.border
   },
   button: {
-    backgroundColor: "#1d4ed8",
-    borderRadius: 12,
+    backgroundColor: estavaCore.colors.primary,
+    borderRadius: 8,
     padding: 14,
     marginTop: 8,
     alignItems: "center"
@@ -90,12 +106,12 @@ const styles = StyleSheet.create({
     fontWeight: "700"
   },
   error: {
-    color: "#b91c1c",
+    color: estavaCore.colors.danger,
     marginBottom: 8
   },
   link: {
     marginTop: 14,
-    color: "#1d4ed8",
+    color: estavaCore.colors.accent,
     textAlign: "center"
   }
 });
