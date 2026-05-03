@@ -70,7 +70,7 @@ export default function AppNavigator() {
           <Stack.Screen
             name="Favorites"
             component={FavoritesScreen}
-            options={{ title: "My Favorites" }}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="Inquiries"
