@@ -22,6 +22,7 @@ import { reviewApi } from "../api/reviewApi";
 import { useAuth } from "../context/AuthContext";
 import { estavaCore } from "../theme/estavaCore";
 import { pushRecentlyViewedProperty } from "../utils/recentlyViewedProperties";
+import { normalizeImageUrl } from "../utils/imageUrl";
 
 export default function PropertyDetailScreen({ route, navigation }) {
   const { propertyId } = route.params;
@@ -329,7 +330,7 @@ export default function PropertyDetailScreen({ route, navigation }) {
       {Array.isArray(property.imageUrls) && property.imageUrls.length > 0 ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageRow}>
           {property.imageUrls.map((url) => (
-            <Image key={url} source={{ uri: url }} style={styles.image} />
+            <Image key={url} source={{ uri: normalizeImageUrl(url) }} style={styles.image} />
           ))}
         </ScrollView>
       ) : (
@@ -473,6 +474,7 @@ export default function PropertyDetailScreen({ route, navigation }) {
             <TextInput
               style={styles.modalInput}
               placeholder="Subject"
+              placeholderTextColor={estavaCore.colors.textSecondary}
               value={inquirySubject}
               onChangeText={setInquirySubject}
               accessibilityLabel="Inquiry subject"
@@ -480,6 +482,7 @@ export default function PropertyDetailScreen({ route, navigation }) {
             <TextInput
               style={[styles.modalInput, styles.modalInputLarge]}
               placeholder="Message"
+              placeholderTextColor={estavaCore.colors.textSecondary}
               multiline
               numberOfLines={4}
               value={inquiryMessage}
@@ -489,6 +492,7 @@ export default function PropertyDetailScreen({ route, navigation }) {
             <TextInput
               style={styles.modalInput}
               placeholder="Contact Number"
+              placeholderTextColor={estavaCore.colors.textSecondary}
               keyboardType="phone-pad"
               maxLength={10}
               value={inquiryContact}
@@ -570,6 +574,7 @@ export default function PropertyDetailScreen({ route, navigation }) {
             <TextInput
               style={styles.modalInput}
               placeholder="Purpose (e.g., Property viewing)"
+              placeholderTextColor={estavaCore.colors.textSecondary}
               value={appointmentPurpose}
               onChangeText={setAppointmentPurpose}
               accessibilityLabel="Appointment purpose"

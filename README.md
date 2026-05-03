@@ -48,6 +48,16 @@ Health check: `GET /api/health`
 - `POST /api/auth/register`
 - `POST /api/auth/login`
 
+## API Highlights (Current Iteration)
+
+- Profile: `GET/PATCH /api/auth/profile`, `PATCH /api/auth/change-password`, `PATCH /api/auth/profile/avatar`
+- Properties: full CRUD with owner/admin authorization and `listingStatus` lifecycle (`available`, `sold`, `rented`, `delisted`)
+- Favorites: CRUD with `priorityLevel` enum (`low`, `medium`, `high`)
+- Inquiries: CRUD with response edit/clear controls for agent/admin
+- Appointments: CRUD with actor-scoped soft delete and status lifecycle (`pending`, `confirmed`, `completed`, `cancelled`)
+- Reviews: CRUD, property aggregate ratings, plus `GET /api/reviews/agent/:agentId`
+- Notifications: admin create + user read/delete flow (`system`, `inquiry`, `appointment`, `review`, `listing`)
+
 ## Current Module Behavior (Phase 3)
 
 - User profile management is available from the home screen avatar entry, with name, password, phone, and avatar updates, plus inquiry phone autofill from saved profile data.
@@ -58,6 +68,7 @@ Health check: `GET /api/health`
 - Appointments support update flows and actor-scoped soft-delete behavior, including delete eligibility for completed appointments.
 - Favorites support note editing (update in CRUD) from the mobile UI using the existing favorites PATCH endpoint.
 - Reviews support create/edit/delete flows; property detail displays average rating and provides a "Review this property" shortcut with preselected property in reviews.
+- Reviews now store `receivedBy` (typically property owner) to support agent review views.
 - Property, inquiry, and appointment modules include stricter authorization and validation hardening.
 
 ## Mobile Setup

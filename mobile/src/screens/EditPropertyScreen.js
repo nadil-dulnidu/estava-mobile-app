@@ -296,7 +296,7 @@ export default function EditPropertyScreen({ route, navigation }) {
       </View>
 
       <Text style={styles.inputLabel}>Title</Text>
-      <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="Title" />
+      <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="Title" placeholderTextColor={estavaCore.colors.textSecondary} />
 
       <Text style={styles.inputLabel}>Description</Text>
       <TextInput
@@ -304,12 +304,13 @@ export default function EditPropertyScreen({ route, navigation }) {
         value={description}
         onChangeText={setDescription}
         placeholder="Description"
+        placeholderTextColor={estavaCore.colors.textSecondary}
         multiline
         numberOfLines={4}
       />
 
       <Text style={styles.inputLabel}>Location</Text>
-      <TextInput style={styles.input} value={location} onChangeText={setLocation} placeholder="Location" />
+      <TextInput style={styles.input} value={location} onChangeText={setLocation} placeholder="Location" placeholderTextColor={estavaCore.colors.textSecondary} />
 
       <Text style={styles.inputLabel}>Price</Text>
       <TextInput
@@ -317,6 +318,7 @@ export default function EditPropertyScreen({ route, navigation }) {
         value={price}
         onChangeText={setPrice}
         placeholder="Price"
+        placeholderTextColor={estavaCore.colors.textSecondary}
         keyboardType="numeric"
       />
 
@@ -347,6 +349,7 @@ export default function EditPropertyScreen({ route, navigation }) {
             value={bedrooms}
             onChangeText={setBedrooms}
             placeholder="e.g. 3"
+            placeholderTextColor={estavaCore.colors.textSecondary}
             keyboardType="numeric"
           />
         </View>
@@ -357,6 +360,7 @@ export default function EditPropertyScreen({ route, navigation }) {
             value={bathrooms}
             onChangeText={setBathrooms}
             placeholder="e.g. 2"
+            placeholderTextColor={estavaCore.colors.textSecondary}
             keyboardType="numeric"
           />
         </View>
@@ -368,6 +372,7 @@ export default function EditPropertyScreen({ route, navigation }) {
         value={areaSize}
         onChangeText={setAreaSize}
         placeholder="e.g. 1200"
+        placeholderTextColor={estavaCore.colors.textSecondary}
         keyboardType="numeric"
       />
 
@@ -377,6 +382,7 @@ export default function EditPropertyScreen({ route, navigation }) {
         value={featuresText}
         onChangeText={setFeaturesText}
         placeholder="Parking, Garden, Balcony"
+        placeholderTextColor={estavaCore.colors.textSecondary}
       />
 
       <Text style={styles.sectionTitle}>Photos</Text>
@@ -388,7 +394,7 @@ export default function EditPropertyScreen({ route, navigation }) {
             const isRemoved = removedImageUrls.includes(normalizeUrl(url));
             return (
               <View key={url} style={styles.previewCard}>
-                <Image source={{ uri: url }} style={[styles.previewImage, isRemoved && styles.removedPreviewImage]} />
+                <Image source={{ uri: normalizeUrl(url).replace(/^http:\/\//i, "https://") }} style={[styles.previewImage, isRemoved && styles.removedPreviewImage]} />
                 <Pressable style={[styles.removePhotoButton, isRemoved && styles.removePhotoButtonActive]} onPress={() => toggleExistingImageRemoval(url)}>
                   <Text style={styles.removePhotoButtonText}>{isRemoved ? "Undo Remove" : "Remove"}</Text>
                 </Pressable>

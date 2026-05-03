@@ -196,19 +196,33 @@ export default function CreatePropertyScreen({ navigation }) {
 
       {!!error && <Text style={styles.error}>{error}</Text>}
 
-      <TextInput style={styles.input} placeholder="Title" value={title} onChangeText={setTitle} />
+      <TextInput
+        style={styles.input}
+        placeholder="Title"
+        placeholderTextColor={estavaCore.colors.textSecondary}
+        value={title}
+        onChangeText={setTitle}
+      />
       <TextInput
         style={[styles.input, styles.textArea]}
         placeholder="Description"
+        placeholderTextColor={estavaCore.colors.textSecondary}
         multiline
         numberOfLines={4}
         value={description}
         onChangeText={setDescription}
       />
-      <TextInput style={styles.input} placeholder="Location" value={location} onChangeText={setLocation} />
+      <TextInput
+        style={styles.input}
+        placeholder="Location"
+        placeholderTextColor={estavaCore.colors.textSecondary}
+        value={location}
+        onChangeText={setLocation}
+      />
       <TextInput
         style={styles.input}
         placeholder="Price"
+        placeholderTextColor={estavaCore.colors.textSecondary}
         keyboardType="numeric"
         value={price}
         onChangeText={setPrice}
@@ -259,6 +273,7 @@ export default function CreatePropertyScreen({ navigation }) {
           <TextInput
             style={[styles.input, styles.inlineInput]}
             placeholder="e.g. 3"
+            placeholderTextColor={estavaCore.colors.textSecondary}
             keyboardType="numeric"
             value={bedrooms}
             onChangeText={setBedrooms}
@@ -269,6 +284,7 @@ export default function CreatePropertyScreen({ navigation }) {
           <TextInput
             style={[styles.input, styles.inlineInput]}
             placeholder="e.g. 2"
+            placeholderTextColor={estavaCore.colors.textSecondary}
             keyboardType="numeric"
             value={bathrooms}
             onChangeText={setBathrooms}
@@ -280,6 +296,7 @@ export default function CreatePropertyScreen({ navigation }) {
       <TextInput
         style={styles.input}
         placeholder="e.g. 1200"
+        placeholderTextColor={estavaCore.colors.textSecondary}
         keyboardType="numeric"
         value={areaSize}
         onChangeText={setAreaSize}
@@ -289,6 +306,7 @@ export default function CreatePropertyScreen({ navigation }) {
       <TextInput
         style={styles.input}
         placeholder="e.g. Parking, Garden, Balcony"
+        placeholderTextColor={estavaCore.colors.textSecondary}
         value={featuresText}
         onChangeText={setFeaturesText}
       />

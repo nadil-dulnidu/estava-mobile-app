@@ -22,7 +22,8 @@ const createReview = async (payload, userId) => {
     userId,
     propertyId: payload.propertyId,
     rating: Number(payload.rating),
-    comment: payload.comment || ""
+    comment: payload.comment || "",
+    receivedBy: property.createdBy
   });
 };
 

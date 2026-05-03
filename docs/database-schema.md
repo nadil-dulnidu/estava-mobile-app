@@ -8,11 +8,11 @@
 ├─────────────────────────────────────────────────────────────────┤
 │ _id: ObjectId (PK)                                              │
 │ fullName: String                                                │
-│ email: String (UNIQUE, INDEX)                                  │
-│ password: String (hashed with bcrypt)                          │
-│ role: Enum ["buyer", "seller", "admin"]                        │
-│ createdAt: Date                                                 │
-│ updatedAt: Date                                                 │
+│ email: String (UNIQUE, INDEX)                                   │
+│ password: String (hashed with bcrypt)                           │
+│ role: Enum ["buyer", "seller", "admin"]                    │
+│ createdAt: Date                                                  │
+│ updatedAt: Date                                                  │
 └─────────────────────────────────────────────────────────────────┘
            ▲                ▲                ▲              ▲
            │                │                │              │
@@ -45,6 +45,7 @@
 │ status: String         │
 │ createdAt: Date        │
 └────────────────────────┘
+```
 ```
 
 ---
@@ -81,16 +82,15 @@
 | propertyType | String | Enum: house, apartment, land, villa, commercial | ✓ |
 | bedrooms | Number | ≥ 0 | ✗ |
 | bathrooms | Number | ≥ 0 | ✗ |
-| landSize | Number | In sqm | ✗ |
-| floorArea | Number | In sqm | ✗ |
+| areaSize | Number | In sqm | ✗ |
 | features | [String] | Array of amenities | ✗ |
 | imageUrls | [String] | Array of image URLs | ✗ |
 | listingStatus | String | Enum: available, sold, rented, delisted | ✓ |
-| sellerId | ObjectId | FK to User (agent/seller) | ✓ |
+| createdBy | ObjectId | FK to User (owner/seller) | ✓ |
 | createdAt | Date | Auto-set on create | ✓ |
 | updatedAt | Date | Auto-set on update | ✗ |
 
-**Indexes:** title, price, location, propertyType, listingStatus, sellerId, createdAt
+**Indexes:** title, price, location, propertyType, listingStatus, createdBy, createdAt
 
 ---
 
@@ -102,9 +102,8 @@
 | _id | ObjectId | Primary Key | ✓ |
 | userId | ObjectId | FK to User, Required | ✓ |
 | propertyId | ObjectId | FK to Property, Required | ✓ |
-| savedDate | Date | Auto-set on create | ✗ |
 | note | String | Optional, max 500 chars | ✗ |
-| priorityLevel | Number | 1-5, default 3 | ✗ |
+| priorityLevel | String | Enum: low, medium, high (default: medium) | ✗ |
 | createdAt | Date | Auto-set on create | ✓ |
 
 **Indexes:** (userId, propertyId) compound unique, userId, propertyId
@@ -121,7 +120,7 @@
 | senderUserId | ObjectId | FK to User (buyer), Required | ✓ |
 | agentId | ObjectId | FK to User (seller/agent), Required | ✓ |
 | subject | String | Required, max 200 chars | ✗ |
-| message | String | Required, max 2000 chars | ✗ |
+| message | String | Required, max 3000 chars | ✗ |
 | contactNumber | String | Optional | ✗ |
 | inquiryStatus | String | Enum: pending, replied, closed | ✓ |
 | createdAt | Date | Auto-set on create | ✓ |
@@ -140,9 +139,9 @@
 | propertyId | ObjectId | FK to Property, Required | ✓ |
 | userId | ObjectId | FK to User (buyer), Required | ✓ |
 | agentId | ObjectId | FK to User (seller/agent), Required | ✓ |
-| date | Date | Required, future date | ✓ |
+| date | String | Required (ISO date string) | ✓ |
 | time | String | HH:MM format, Required | ✗ |
-| visitPurpose | String | Enum: view, inspection, negotiation | ✗ |
+| visitPurpose | String | Text description, default: "Property visit" | ✗ |
 | appointmentStatus | String | Enum: pending, confirmed, completed, cancelled | ✓ |
 | createdAt | Date | Auto-set on create | ✓ |
 | updatedAt | Date | Auto-set on update | ✗ |
@@ -158,15 +157,14 @@
 |-------|------|-------------|-------|
 | _id | ObjectId | Primary Key | ✓ |
 | userId | ObjectId | FK to User, Required | ✓ |
-| propertyId | ObjectId | FK to Property, Optional | ✓ |
-| agentId | ObjectId | FK to User (agent), Optional | ✓ |
+| propertyId | ObjectId | FK to Property, Required | ✓ |
+| receivedBy | ObjectId | FK to User (agent/owner), Optional | ✓ |
 | rating | Number | 1-5, Required | ✗ |
-| comment | String | Optional, max 1000 chars | ✗ |
-| reviewDate | Date | Auto-set on create | ✓ |
+| comment | String | Optional, max 1200 chars | ✗ |
 | createdAt | Date | Auto-set on create | ✓ |
 
-**Indexes:** propertyId, agentId, userId, createdAt
-**Note:** At least one of propertyId or agentId must be set.
+**Indexes:** propertyId, receivedBy, userId, createdAt
+**Note:** Reviews are property-centered in the current schema; a `receivedBy` field is available to represent the user who received the review (typically the property owner).
 
 ---
 
@@ -177,9 +175,9 @@
 |-------|------|-------------|-------|
 | _id | ObjectId | Primary Key | ✓ |
 | userId | ObjectId | FK to User, Required | ✓ |
-| title | String | Required, max 100 chars | ✗ |
-| message | String | Required, max 500 chars | ✗ |
-| type | String | Enum: inquiry_reply, appointment_confirmed, review_posted, property_listed | ✓ |
+| title | String | Required, max 160 chars | ✗ |
+| message | String | Required, max 1500 chars | ✗ |
+| type | String | Enum: system, inquiry, appointment, review, listing | ✓ |
 | status | String | Enum: unread, read | ✓ |
 | createdAt | Date | Auto-set on create | ✓ |
 
@@ -195,7 +193,7 @@
 | Favorite | links | User & Property | many-to-many, buyer saves properties |
 | Inquiry | from-to | User & User & Property | many-to-many, buyer queries agent about property |
 | Appointment | books | User & User & Property | many-to-many, buyer books visit at property with agent |
-| Review | about | User & Property/User | many-to-many, buyer reviews property or agent |
+| Review | about | User & Property | many-to-many, buyer reviews property |
 | Notification | sent-to | User | 1-to-many, system notifies users |
 
 ---
@@ -223,13 +221,13 @@
    - Cannot create inquiry for own property
 
 5. **Appointment Constraints:**
-   - Date must be future date (> today)
+   - `date` should be supplied as an ISO date string
    - Cannot book same slot twice (unique: propertyId + date + time)
    - `appointmentStatus` transitions: pending → confirmed/cancelled → completed
    - Delete behavior uses dual soft-delete semantics for buyer and agent perspectives
 
 6. **Review Constraints:**
-   - User cannot review same property/agent twice
+   - User cannot review same property twice
    - Can only review if user has purchased/visited property or interacted with agent
    - Rating is required; comment is optional
    - Review owner can edit rating/comment, with admin moderation control

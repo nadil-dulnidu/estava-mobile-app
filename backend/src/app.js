@@ -12,6 +12,8 @@ const { notFound, errorHandler } = require("./middlewares/errorMiddleware");
 
 const app = express();
 
+app.set("trust proxy", 1);
+
 // Platform health probes often hit '/' or '/healthz'. Keep these lightweight.
 app.get("/", (_req, res) => {
   res.status(200).json({

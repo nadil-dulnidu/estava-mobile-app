@@ -391,6 +391,7 @@ export default function InquiriesScreen() {
             <TextInput
               style={[styles.modalInput, styles.modalInputLarge]}
               placeholder="Type response message..."
+              placeholderTextColor={estavaCore.colors.textSecondary}
               multiline
               numberOfLines={4}
               value={responseMessage}
@@ -438,6 +439,7 @@ export default function InquiriesScreen() {
             <TextInput
               style={styles.modalInput}
               placeholder="Subject"
+              placeholderTextColor={estavaCore.colors.textSecondary}
               value={editSubject}
               onChangeText={(text) => {
                 setEditSubject(text);
@@ -450,6 +452,7 @@ export default function InquiriesScreen() {
             <TextInput
               style={[styles.modalInput, styles.modalInputLarge]}
               placeholder="Message"
+              placeholderTextColor={estavaCore.colors.textSecondary}
               multiline
               numberOfLines={4}
               value={editMessage}
@@ -464,6 +467,7 @@ export default function InquiriesScreen() {
             <TextInput
               style={styles.modalInput}
               placeholder="Contact Number"
+              placeholderTextColor={estavaCore.colors.textSecondary}
               keyboardType="phone-pad"
               maxLength={10}
               value={editContact}

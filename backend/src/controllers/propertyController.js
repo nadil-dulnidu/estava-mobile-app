@@ -20,7 +20,10 @@ const {
 
 const buildImageUrls = (req) => {
   if (!req.files || req.files.length === 0) return [];
-  return req.files.map((file) => `${req.protocol}://${req.get("host")}/uploads/properties/${file.filename}`);
+  const forwardedProto = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim();
+  const protocol = forwardedProto || req.protocol;
+
+  return req.files.map((file) => `${protocol}://${req.get("host")}/uploads/properties/${file.filename}`);
 };
 
 const normalizePayload = (payload) => {

@@ -46,6 +46,10 @@ Thumbs.db
 # Package manager lockfile logs
 .pnpm-store/
 
+# unwanted docs
+docs/*.pdf
+docs/pdf-*.md
+
 # Other
 user pass.txt
 node_modules

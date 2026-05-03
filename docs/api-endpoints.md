@@ -35,7 +35,7 @@ Base URL: /api
 | --- | --- | --- | --- | --- |
 | POST | /favorites | Yes | any authenticated | Add property to favorites |
 | GET | /favorites/me | Yes | any authenticated | List my favorites |
-| PATCH | /favorites/:id | Yes | owner | Update note/priority |
+| PATCH | /favorites/:id | Yes | owner | Update note / `priorityLevel` (enum: low, medium, high) |
 | DELETE | /favorites/:id | Yes | owner | Remove favorite |
 
 ## Inquiries
@@ -60,8 +60,9 @@ Base URL: /api
 
 | Method | Endpoint | Auth | Roles | Notes |
 | --- | --- | --- | --- | --- |
-| POST | /reviews | Yes | any authenticated | Submit property rating/comment |
+| POST | /reviews | Yes | any authenticated | Submit property rating/comment (server sets `receivedBy` = property owner) |
 | GET | /reviews/property/:propertyId | No | Public | List property reviews and provide average rating for property detail views |
+| GET | /reviews/agent/:agentId | No | Public | List reviews received by an agent (`receivedBy`) |
 | PATCH | /reviews/:id | Yes | review owner/admin | Edit rating/comment |
 | DELETE | /reviews/:id | Yes | review owner/admin | Delete review |
 
@@ -73,6 +74,8 @@ Base URL: /api
 | GET | /notifications/me | Yes | any authenticated | List my notifications |
 | PATCH | /notifications/:id/read | Yes | owner/admin | Mark notification as read |
 | DELETE | /notifications/:id | Yes | owner/admin | Delete notification |
+
+**Notification types:** `system`, `inquiry`, `appointment`, `review`, `listing`
 
 ## Status Values and Phase 3 Behavior Rules
 

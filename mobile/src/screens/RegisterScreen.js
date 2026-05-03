@@ -44,12 +44,14 @@ export default function RegisterScreen({ navigation }) {
       <TextInput
         style={styles.input}
         placeholder="Full Name"
+        placeholderTextColor={estavaCore.colors.textSecondary}
         value={fullName}
         onChangeText={setFullName}
       />
       <TextInput
         style={styles.input}
         placeholder="Email"
+        placeholderTextColor={estavaCore.colors.textSecondary}
         autoCapitalize="none"
         keyboardType="email-address"
         value={email}
@@ -58,6 +60,7 @@ export default function RegisterScreen({ navigation }) {
       <TextInput
         style={styles.input}
         placeholder="Password"
+        placeholderTextColor={estavaCore.colors.textSecondary}
         secureTextEntry
         value={password}
         onChangeText={setPassword}

@@ -16,6 +16,7 @@ import { useAuth } from "../context/AuthContext";
 import { isTenDigitPhoneNumber, normalizePhoneNumber } from "../utils/phoneNumber";
 import { estavaCore } from "../theme/estavaCore";
 import { AppFooter, HeaderActions, QuickAccessMenu } from "../components/AppChrome";
+import { normalizeImageUrl } from "../utils/imageUrl";
 
 const getInitials = (name) => {
   const parts = String(name || "")
@@ -196,7 +197,7 @@ export default function ProfileScreen({ navigation }) {
           <Text style={styles.sectionTitle}>Profile Picture</Text>
           <View style={styles.avatarRow}>
             {user?.profileImage ? (
-              <Image source={{ uri: user.profileImage }} style={styles.avatarImage} />
+              <Image source={{ uri: normalizeImageUrl(user.profileImage) }} style={styles.avatarImage} />
             ) : (
               <View style={styles.avatarFallback}>
                 <Text style={styles.avatarFallbackText}>{getInitials(user?.fullName)}</Text>
@@ -240,6 +241,7 @@ export default function ProfileScreen({ navigation }) {
             value={fullName}
             onChangeText={setFullName}
             placeholder="Your full name"
+            placeholderTextColor={estavaCore.colors.textSecondary}
             autoCapitalize="words"
             autoComplete="name"
             textContentType="name"
@@ -253,6 +255,7 @@ export default function ProfileScreen({ navigation }) {
             value={phoneNumber}
             onChangeText={(value) => setPhoneNumber(normalizePhoneNumber(value))}
             placeholder="10-digit phone number"
+            placeholderTextColor={estavaCore.colors.textSecondary}
             keyboardType="phone-pad"
             maxLength={10}
             autoComplete="tel"
@@ -284,6 +287,7 @@ export default function ProfileScreen({ navigation }) {
             value={currentPassword}
             onChangeText={setCurrentPassword}
             placeholder="Current password"
+            placeholderTextColor={estavaCore.colors.textSecondary}
             secureTextEntry
             autoCapitalize="none"
             autoCorrect={false}
@@ -298,6 +302,7 @@ export default function ProfileScreen({ navigation }) {
             value={newPassword}
             onChangeText={setNewPassword}
             placeholder="At least 8 characters"
+            placeholderTextColor={estavaCore.colors.textSecondary}
             secureTextEntry
             autoCapitalize="none"
             autoCorrect={false}
@@ -312,6 +317,7 @@ export default function ProfileScreen({ navigation }) {
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             placeholder="Repeat new password"
+            placeholderTextColor={estavaCore.colors.textSecondary}
             secureTextEntry
             autoCapitalize="none"
             autoCorrect={false}

@@ -151,6 +151,7 @@ export default function FavoritesScreen() {
                     <TextInput
                       style={styles.noteInput}
                       placeholder="Add a note for this favorite"
+                      placeholderTextColor={estavaCore.colors.textSecondary}
                       multiline
                       numberOfLines={3}
                       maxLength={MAX_NOTE_LENGTH}

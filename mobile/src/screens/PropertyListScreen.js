@@ -18,6 +18,7 @@ import { getMyProperties, getProperties } from "../api/propertyApi";
 import { useAuth } from "../context/AuthContext";
 import { estavaCore } from "../theme/estavaCore";
 import { AppFooter, HeaderActions, QuickAccessMenu } from "../components/AppChrome";
+import { normalizeImageUrl } from "../utils/imageUrl";
 
 const resolveUserId = (entity) => {
   if (!entity) return "";
@@ -317,7 +318,7 @@ export default function PropertyListScreen({ navigation, route }) {
       accessibilityLabel={item.title}
     >
       {Array.isArray(item?.imageUrls) && item.imageUrls[0] ? (
-        <Image source={{ uri: item.imageUrls[0] }} style={styles.cardImage} />
+        <Image source={{ uri: normalizeImageUrl(item.imageUrls[0]) }} style={styles.cardImage} />
       ) : (
         <View style={styles.cardImagePlaceholder}>
           <Text style={styles.cardImagePlaceholderText}>No image</Text>

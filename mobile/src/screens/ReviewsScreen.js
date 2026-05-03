@@ -293,6 +293,7 @@ export default function ReviewsScreen({ route, navigation }) {
                 <TextInput
                   style={styles.modalInput}
                   placeholder="Write your comment..."
+                  placeholderTextColor={estavaCore.colors.textSecondary}
                   multiline
                   numberOfLines={4}
                   value={comment}
@@ -344,6 +345,7 @@ export default function ReviewsScreen({ route, navigation }) {
             <TextInput
               style={styles.modalInput}
               placeholder="Update your comment..."
+              placeholderTextColor={estavaCore.colors.textSecondary}
               multiline
               numberOfLines={4}
               value={editComment}
