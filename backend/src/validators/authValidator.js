@@ -27,8 +27,8 @@ const validateRegisterInput = (payload) => {
 const validateLoginInput = (payload) => {
   const { email, password } = payload;
 
-  if (!email || !isEmail(email)) {
-    throw new AppError("Please provide a valid email", 400);
+  if (!email || String(email).trim().length < 2) {
+    throw new AppError("Please provide an email or username", 400);
   }
 
   if (!password || password.length < 8) {

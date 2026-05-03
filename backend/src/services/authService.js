@@ -11,6 +11,22 @@ const signToken = (userId, role) => {
   });
 };
 
+const findLoginUser = async (identifier) => {
+  const normalized = String(identifier || "").trim();
+  const lowercased = normalized.toLowerCase();
+
+  const query = lowercased.includes("@")
+    ? { email: lowercased }
+    : {
+        $or: [
+          { email: lowercased },
+          { fullName: normalized }
+        ]
+      };
+
+  return User.findOne(query).select("+password");
+};
+
 const normalizeUserPayload = (user) => {
   return {
     id: user._id,
@@ -46,15 +62,15 @@ const registerUser = async ({ fullName, email, password, role }) => {
 };
 
 const loginUser = async ({ email, password }) => {
-  const user = await User.findOne({ email: email.toLowerCase() }).select("+password");
+  const user = await findLoginUser(email);
 
   if (!user) {
-    throw new AppError("Invalid email or password", 401);
+    throw new AppError("Invalid email, username, or password", 401);
   }
 
   const passwordMatch = await bcrypt.compare(password, user.password);
   if (!passwordMatch) {
-    throw new AppError("Invalid email or password", 401);
+    throw new AppError("Invalid email, username, or password", 401);
   }
 
   const token = signToken(user._id.toString(), user.role);
