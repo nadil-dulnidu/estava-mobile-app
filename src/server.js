@@ -3,7 +3,7 @@ const http = require("http");
 const app = require("./app");
 const env = require("./config/env");
 const { connectDB, disconnectDB } = require("./config/db");
-const { initializeSocketServer } = require("./socket");
+const { initializeSocketServer } = require("./socket/index");
 
 let server;
 let retryTimer = null;
@@ -27,6 +27,8 @@ const startServer = async () => {
     try {
       await connectDB();
       app.locals.dbConnected = true;
+      // eslint-disable-next-line no-console
+      console.log("MongoDB connected successfully");
     } catch (error) {
       app.locals.dbConnected = false;
       // eslint-disable-next-line no-console
@@ -38,18 +40,25 @@ const startServer = async () => {
 
   server = http.createServer(app);
   initializeSocketServer(server);
-  server.listen(env.port, "0.0.0.0");
+
+  // Railway provides PORT automatically. Locally, fallback to env.port or 5001.
+  const PORT = Number(process.env.PORT || env.port || 5001);
+
+  server.listen(PORT, "0.0.0.0");
+
   server.on("listening", () => {
     // eslint-disable-next-line no-console
-    console.log(`Server running on 0.0.0.0:${env.port}`);
+    console.log(`Server running on 0.0.0.0:${PORT}`);
   });
+
   server.on("error", (error) => {
     // eslint-disable-next-line no-console
     console.error("Server failed to start", error.message);
     process.exit(1);
   });
 
-  await connectWithRetry();
+  // Do not await this. Let the HTTP server start first, then retry DB in background.
+  connectWithRetry();
 };
 
 const shutdown = async (signal) => {
