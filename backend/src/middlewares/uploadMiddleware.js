@@ -42,6 +42,29 @@ const uploadPropertyImages = multer({
   }
 }).array("images", 8);
 
+// Wrap multer with error handling
+const uploadPropertyImagesHandler = (req, res, next) => {
+  uploadPropertyImages(req, res, (error) => {
+    if (!error) {
+      return next();
+    }
+
+    if (error instanceof multer.MulterError) {
+      if (error.code === "LIMIT_FILE_SIZE") {
+        return next(new AppError("Each property image must be 5MB or less", 400));
+      }
+
+      if (error.code === "LIMIT_FILE_COUNT") {
+        return next(new AppError("You can upload up to 8 property images", 400));
+      }
+
+      return next(new AppError("Invalid property image upload request", 400));
+    }
+
+    return next(error);
+  });
+};
+
 const avatarUpload = multer({
   storage: buildStorage(avatarUploadDir),
   fileFilter,
@@ -70,6 +93,6 @@ const uploadAvatarImage = (req, res, next) => {
 };
 
 module.exports = {
-  uploadPropertyImages,
+  uploadPropertyImages: uploadPropertyImagesHandler,
   uploadAvatarImage
 };

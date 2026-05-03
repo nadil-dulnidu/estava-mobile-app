@@ -9,7 +9,11 @@
       "**/*"
     ],
     "android": {
-      "package": "com.estava.mobile"
+      "package": "com.estava.mobile",
+      "permissions": [
+        "READ_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES"
+      ]
     },
     "ios": {
       "bundleIdentifier": "com.estava.mobile",

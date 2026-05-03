@@ -1,18 +1,6 @@
 // API client helpers for backend communication and module-specific requests.
 import apiClient from "./client";
 
-// Convert image URI to blob for proper React Native FormData handling.
-const uriToBlob = async (uri) => {
-  try {
-    const response = await fetch(uri);
-    if (!response.ok) throw new Error(`Failed to fetch image: ${response.status}`);
-    return await response.blob();
-  } catch (error) {
-    console.error("Error converting URI to blob:", error);
-    throw error;
-  }
-};
-
 const buildPropertyCreateFormData = async (payload) => {
   const formData = new FormData();
 
@@ -37,20 +25,25 @@ const buildPropertyCreateFormData = async (payload) => {
     formData.append("features", payload.features.join(","));
   }
 
-  // Async: convert image URIs to blobs before appending to FormData
+  // In React Native/Expo, FormData handles file:// and content:// URIs directly.
+  // Do NOT use fetch() on Android content:// URIs - it fails.
   if (Array.isArray(payload.images) && payload.images.length > 0) {
     for (let i = 0; i < payload.images.length; i++) {
       const image = payload.images[i];
       if (!image?.uri) continue;
 
       try {
-        const blob = await uriToBlob(image.uri);
         const extension = image.uri.split(".").pop() || "jpg";
         const fallbackName = `property-image-${Date.now()}-${i}.${extension}`;
         const fileName = image.fileName || fallbackName;
 
-        // Append blob directly with proper metadata
-        formData.append("images", blob, fileName);
+        // Directly append the image object with URI, type, and name.
+        // React Native FormData will handle file:// and content:// URIs.
+        formData.append("images", {
+          uri: image.uri,
+          type: image.mimeType || "image/jpeg",
+          name: fileName
+        });
       } catch (error) {
         console.error(`Failed to process image ${i}:`, error);
         throw error;
@@ -97,20 +90,25 @@ const buildPropertyUpdateFormData = async (payload) => {
     formData.append("replaceImages", payload.replaceImages ? "true" : "false");
   }
 
-  // Async: convert image URIs to blobs before appending to FormData
+  // In React Native/Expo, FormData handles file:// and content:// URIs directly.
+  // Do NOT use fetch() on Android content:// URIs - it fails.
   if (Array.isArray(payload.images) && payload.images.length > 0) {
     for (let i = 0; i < payload.images.length; i++) {
       const image = payload.images[i];
       if (!image?.uri) continue;
 
       try {
-        const blob = await uriToBlob(image.uri);
         const extension = image.uri.split(".").pop() || "jpg";
         const fallbackName = `property-image-${Date.now()}-${i}.${extension}`;
         const fileName = image.fileName || fallbackName;
 
-        // Append blob directly with proper metadata
-        formData.append("images", blob, fileName);
+        // Directly append the image object with URI, type, and name.
+        // React Native FormData will handle file:// and content:// URIs.
+        formData.append("images", {
+          uri: image.uri,
+          type: image.mimeType || "image/jpeg",
+          name: fileName
+        });
       } catch (error) {
         console.error(`Failed to process image ${i}:`, error);
         throw error;

@@ -181,7 +181,14 @@ export default function CreatePropertyScreen({ navigation }) {
         }
       ]);
     } catch (submitError) {
-      const message = submitError?.response?.data?.message || "Failed to post property";
+      console.error("Upload error details:", {
+        message: submitError?.message,
+        response: submitError?.response?.data,
+        status: submitError?.response?.status,
+        url: submitError?.config?.url,
+        method: submitError?.config?.method
+      });
+      const message = submitError?.response?.data?.message || submitError?.message || "Failed to post property";
       setError(message);
     } finally {
       setSubmitting(false);

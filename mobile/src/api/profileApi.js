@@ -1,18 +1,6 @@
 // Profile API client for authenticated user profile operations.
 import apiClient from "./client";
 
-// Convert image URI to blob for proper React Native FormData handling.
-const uriToBlob = async (uri) => {
-  try {
-    const response = await fetch(uri);
-    if (!response.ok) throw new Error(`Failed to fetch image: ${response.status}`);
-    return await response.blob();
-  } catch (error) {
-    console.error("Error converting URI to blob:", error);
-    throw error;
-  }
-};
-
 const buildAvatarFormData = async (image) => {
   const formData = new FormData();
 
@@ -21,13 +9,16 @@ const buildAvatarFormData = async (image) => {
   }
 
   try {
-    const blob = await uriToBlob(image.uri);
     const extension = image.uri.split(".").pop() || "jpg";
     const fallbackName = `avatar-${Date.now()}.${extension}`;
     const fileName = image.fileName || fallbackName;
 
-    // Append blob directly with proper metadata
-    formData.append("avatar", blob, fileName);
+    // In React Native/Expo, FormData handles file:// and content:// URIs directly.
+    formData.append("avatar", {
+      uri: image.uri,
+      type: image.mimeType || "image/jpeg",
+      name: fileName
+    });
   } catch (error) {
     console.error("Failed to process avatar image:", error);
     throw error;
