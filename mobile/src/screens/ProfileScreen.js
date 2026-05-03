@@ -174,7 +174,7 @@ export default function ProfileScreen({ navigation }) {
 
   return (
     <View style={styles.screen}>
-      <QuickAccessMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <QuickAccessMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} user={user} />
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <View style={styles.pageHeader}>
           <View style={styles.pageHeaderText}>
