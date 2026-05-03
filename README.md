@@ -39,7 +39,7 @@ npm install
 npm run dev
 ```
 
-Backend base URL: `http://localhost:5000/api`
+Backend base URL: `http://localhost:5001/api`
 
 Health check: `GET /api/health`
 
@@ -75,7 +75,7 @@ npm install
 EXPO_PUBLIC_API_BASE_URL=https://your-hosted-backend.example.com/api
 ```
 
-For local Android emulator testing, fallback base URL is `http://10.0.2.2:5000/api`.
+For local Android emulator testing, fallback base URL is `http://10.0.2.2:5001/api`.
 
 1. Start app:
 
@@ -118,6 +118,28 @@ Notes:
 - Standalone APK/AAB builds do not require `expo start` to run.
 - This is assignment-compliant because the mobile app points to a hosted backend API.
 
+## Render Deployment
+
+This repo includes `render.yaml` for the backend service. In Render, create a new Blueprint from this repository and Render will use:
+
+- Root directory: `backend`
+- Build command: `npm ci --omit=dev`
+- Start command: `npm start`
+- Health check path: `/healthz`
+- Public API base URL: `https://estava-mobile-app.onrender.com/api`
+
+Set these Render environment variables before the first deploy:
+
+```bash
+NODE_ENV=production
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>/<database>?retryWrites=true&w=majority
+JWT_SECRET=<long-random-secret>
+JWT_EXPIRES_IN=7d
+CORS_ORIGIN=*
+```
+
+Render provides `PORT` automatically; do not hard-code it in Render.
+
 ## Docker (Backend Only)
 
 Run backend in Docker:
@@ -130,6 +152,18 @@ Notes:
 
 - Compose intentionally excludes MongoDB.
 - Backend connects to MongoDB Atlas using `MONGODB_URI` from `backend/.env`.
+- Local backend defaults in this repo use port `5001` to avoid common macOS conflicts on `5000`.
+
+## Smoke Check
+
+After starting the backend locally, run:
+
+```bash
+cd backend
+npm run smoke
+```
+
+This checks `/`, `/healthz`, and `/api/health` on the local backend and fails fast if the service is not responding correctly.
 
 ## Next Build Steps
 
