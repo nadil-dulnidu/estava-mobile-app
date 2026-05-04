@@ -1,18 +1,15 @@
 // Service layer for booking visits and appointment status transitions.
 const Appointment = require("../models/Appointment");
 const Property = require("../models/Property");
-const User = require("../models/User");
+const Notification = require("../models/Notification");
 const AppError = require("../utils/AppError");
-const { createAndDispatchNotification } = require("./notificationService");
 
 const SELLER_ALLOWED_STATUS_TRANSITIONS = {
-  pending: ["confirmed", "cancelled", "completed"],
+  pending: ["confirmed", "cancelled"],
   confirmed: ["completed", "cancelled"],
   completed: [],
   cancelled: []
 };
-
-const TERMINAL_STATUS_SOURCE_STATUSES = ["pending", "confirmed"];
 
 const DELETABLE_APPOINTMENT_STATUSES = ["cancelled", "completed"];
 const TERMINAL_APPOINTMENT_STATUSES = ["completed", "cancelled"];
@@ -32,32 +29,8 @@ const isBuyerForAppointment = (appointment, userId) =>
 const isSellerForAppointment = (appointment, userId) =>
   appointment.agentId.toString() === userId.toString();
 
-const ACTIVE_APPOINTMENT_STATUSES = ["pending", "confirmed"];
-
-const ensureAppointmentSlotAvailable = async ({ propertyId, date, time, excludeAppointmentId }) => {
-  if (!propertyId || !date || !time) {
-    return;
-  }
-
-  const filter = {
-    propertyId,
-    date,
-    time,
-    appointmentStatus: { $in: ACTIVE_APPOINTMENT_STATUSES }
-  };
-
-  if (excludeAppointmentId) {
-    filter._id = { $ne: excludeAppointmentId };
-  }
-
-  const conflictingAppointment = await Appointment.findOne(filter).select("_id");
-  if (conflictingAppointment) {
-    throw new AppError("Another active appointment already exists for this property at that date and time", 409);
-  }
-};
-
 const createAppointment = async (payload, userId) => {
-  const property = await Property.findById(payload.propertyId).select("_id title createdBy listingStatus");
+  const property = await Property.findById(payload.propertyId).select("_id createdBy listingStatus");
   if (!property) {
     throw new AppError("Property not found", 404);
   }
@@ -70,12 +43,6 @@ const createAppointment = async (payload, userId) => {
     throw new AppError("You cannot book a visit for your own property", 400);
   }
 
-  await ensureAppointmentSlotAvailable({
-    propertyId: payload.propertyId,
-    date: payload.date,
-    time: payload.time
-  });
-
   const appointment = await Appointment.create({
     propertyId: payload.propertyId,
     userId,
@@ -86,15 +53,12 @@ const createAppointment = async (payload, userId) => {
     appointmentStatus: "pending"
   });
 
-  const buyer = await User.findById(userId).select("fullName email");
-  const buyerName = buyer?.fullName || buyer?.email || "A buyer";
-  const propertyTitle = property?.title || "your listing";
-
-  await createAndDispatchNotification({
+  await Notification.create({
     userId: property.createdBy,
-    title: `Visit request from ${buyerName}`,
-    message: `${buyerName} requested a visit for "${propertyTitle}" on ${payload.date} at ${payload.time}.`,
-    type: "appointment"
+    title: "New appointment request",
+    message: "A buyer requested a new property visit appointment.",
+    type: "appointment",
+    status: "unread"
   });
 
   return appointment;
@@ -168,14 +132,6 @@ const updateAppointment = async (appointmentId, payload, user) => {
   if (nextStatus !== undefined && nextStatus !== currentStatus) {
     if (isAdmin) {
       // Admin may force transitions for support/operations use-cases.
-    } else if (nextStatus === "completed") {
-      if (!isBuyer && !isSeller) {
-        throw new AppError("You do not have permission to update this appointment", 403);
-      }
-
-      if (!TERMINAL_STATUS_SOURCE_STATUSES.includes(currentStatus)) {
-        throw new AppError(`Invalid status transition from ${currentStatus} to ${nextStatus}`, 400);
-      }
     } else if (isBuyer) {
       if (nextStatus !== "cancelled") {
         throw new AppError("Buyer can only update status to cancelled", 403);
@@ -196,28 +152,15 @@ const updateAppointment = async (appointmentId, payload, user) => {
   if (payload.time !== undefined) appointment.time = payload.time;
   if (nextStatus !== undefined) appointment.appointmentStatus = nextStatus;
 
-  await ensureAppointmentSlotAvailable({
-    propertyId: appointment.propertyId,
-    date: appointment.date,
-    time: appointment.time,
-    excludeAppointmentId: appointment._id
-  });
-
   await appointment.save();
 
   if (isSeller || isAdmin) {
-    const [property, updater] = await Promise.all([
-      Property.findById(appointment.propertyId).select("title"),
-      User.findById(user._id).select("fullName email")
-    ]);
-    const updaterName = updater?.fullName || updater?.email || "The property owner";
-    const propertyTitle = property?.title || "your appointment";
-
-    await createAndDispatchNotification({
+    await Notification.create({
       userId: appointment.userId,
       title: "Appointment updated",
-      message: `${updaterName} updated "${propertyTitle}" to ${appointment.appointmentStatus}. Open Appointments for details.`,
-      type: "appointment"
+      message: `Your appointment status is now ${appointment.appointmentStatus}.`,
+      type: "appointment",
+      status: "unread"
     });
   }
 

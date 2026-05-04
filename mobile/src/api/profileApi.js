@@ -1,42 +1,6 @@
 // Profile API client for authenticated user profile operations.
 import apiClient from "./client";
 
-const IMAGE_MIME_BY_EXTENSION = {
-  jpg: "image/jpeg",
-  jpeg: "image/jpeg",
-  png: "image/png",
-  webp: "image/webp",
-  gif: "image/gif",
-  heic: "image/heic",
-  heif: "image/heif"
-};
-
-const getFileExtension = (value) => {
-  const cleaned = String(value || "").split("?")[0].trim().toLowerCase();
-  const match = cleaned.match(/\.([a-z0-9]+)$/i);
-  return match ? match[1].toLowerCase() : "";
-};
-
-const buildFileName = (image) => {
-  const existingName = String(image?.fileName || "").trim();
-  if (existingName) {
-    return existingName;
-  }
-
-  const extension = getFileExtension(image?.fileName || image?.uri) || "jpg";
-  return `avatar-${Date.now()}.${extension}`;
-};
-
-const inferMimeType = (image) => {
-  const rawMimeType = String(image?.mimeType || "").trim().toLowerCase();
-  if (rawMimeType) {
-    return rawMimeType === "image/jpg" ? "image/jpeg" : rawMimeType;
-  }
-
-  const extension = getFileExtension(image?.fileName || image?.uri);
-  return IMAGE_MIME_BY_EXTENSION[extension] || "image/jpeg";
-};
-
 const buildAvatarFormData = async (image) => {
   const formData = new FormData();
 
@@ -45,12 +9,14 @@ const buildAvatarFormData = async (image) => {
   }
 
   try {
-    const fileName = buildFileName(image);
+    const extension = image.uri.split(".").pop() || "jpg";
+    const fallbackName = `avatar-${Date.now()}.${extension}`;
+    const fileName = image.fileName || fallbackName;
 
     // In React Native/Expo, FormData handles file:// and content:// URIs directly.
     formData.append("avatar", {
       uri: image.uri,
-      type: inferMimeType(image),
+      type: image.mimeType || "image/jpeg",
       name: fileName
     });
   } catch (error) {
