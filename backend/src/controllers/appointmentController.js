@@ -13,7 +13,7 @@ const {
   deleteAppointment
 } = require("../services/appointmentService");
 
-const create = catchAsync(async (req, res) => {
+const create = catchAsync(async (req, res) => {       // create funtion
   validateCreateAppointmentInput(req.body);
   const appointment = await createAppointment(req.body, req.user._id);
   return successResponse(res, appointment, "Appointment created successfully", 201);
