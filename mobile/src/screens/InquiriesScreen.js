@@ -513,7 +513,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: estavaCore.colors.background
   },
-  container: { flex: 1, padding: 16, backgroundColor: estavaCore.colors.background },
+  container: { flex: 1, padding: 18, backgroundColor: estavaCore.colors.background },
   title: { fontSize: 24, fontWeight: "700", marginBottom: 16, color: estavaCore.colors.primary },
   error: { color: estavaCore.colors.danger, marginBottom: 8 },
   emptyText: { textAlign: "center", color: estavaCore.colors.textSecondary, marginTop: 20 },
@@ -522,8 +522,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: estavaCore.colors.border,
-    padding: 12,
-    marginBottom: 12
+    padding: 14,
+    marginBottom: 12,
+    ...estavaCore.shadow.card
   },
   subject: { fontSize: 16, fontWeight: "600", color: estavaCore.colors.textPrimary },
   property: { fontSize: 12, color: estavaCore.colors.textSecondary, marginBottom: 4 },
@@ -544,9 +545,9 @@ const styles = StyleSheet.create({
   tabText: { fontWeight: "600", color: estavaCore.colors.textSecondary },
   tabTextActive: { color: estavaCore.colors.surface },
   responseBox: {
-    marginTop: 8,
-    padding: 8,
-    borderRadius: 8,
+    marginTop: 10,
+    padding: 10,
+    borderRadius: 10,
     backgroundColor: estavaCore.colors.accentSoft,
     borderWidth: 1,
     borderColor: estavaCore.colors.border,
@@ -556,14 +557,14 @@ const styles = StyleSheet.create({
   responseText: { marginTop: 4, color: estavaCore.colors.textPrimary },
   responseDate: { marginTop: 4, fontSize: 12, color: estavaCore.colors.textSecondary },
   actionsRow: {
-    marginTop: 8,
+    marginTop: 10,
     flexDirection: "row",
     flexWrap: "wrap",
     alignItems: "center"
   },
   actionPrimary: {
     backgroundColor: estavaCore.colors.primary,
-    borderRadius: 8,
+    borderRadius: 10,
     minHeight: 44,
     paddingVertical: 10,
     paddingHorizontal: 10,
@@ -574,7 +575,7 @@ const styles = StyleSheet.create({
   actionPrimaryText: { color: "#fff", fontWeight: "700", fontSize: 12 },
   actionSecondary: {
     backgroundColor: estavaCore.colors.surfaceMuted,
-    borderRadius: 8,
+    borderRadius: 10,
     minHeight: 44,
     paddingVertical: 10,
     paddingHorizontal: 10,
@@ -585,7 +586,7 @@ const styles = StyleSheet.create({
   actionSecondaryText: { color: estavaCore.colors.textPrimary, fontWeight: "700", fontSize: 12 },
   actionDanger: {
     backgroundColor: estavaCore.colors.dangerSoft,
-    borderRadius: 8,
+    borderRadius: 10,
     minHeight: 44,
     paddingVertical: 10,
     paddingHorizontal: 10,
@@ -598,7 +599,7 @@ const styles = StyleSheet.create({
   modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.3)" },
   modalContent: {
     backgroundColor: estavaCore.colors.surface,
-    padding: 16,
+    padding: 18,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18
   },
@@ -606,29 +607,33 @@ const styles = StyleSheet.create({
   modalInput: {
     borderWidth: 1,
     borderColor: estavaCore.colors.border,
-    borderRadius: 8,
-    padding: 10,
+    borderRadius: 10,
+    padding: 12,
     marginBottom: 12
   },
   modalInputLarge: {
     minHeight: 90,
     textAlignVertical: "top"
   },
-  modalButtons: { flexDirection: "row", justifyContent: "space-around" },
+  modalButtons: { flexDirection: "row", gap: 10 },
   cancelBtn: {
+    flex: 1,
     minHeight: 44,
     paddingVertical: 10,
     paddingHorizontal: 20,
-    borderRadius: 8,
-    backgroundColor: estavaCore.colors.surfaceMuted
+    borderRadius: 10,
+    backgroundColor: estavaCore.colors.surfaceMuted,
+    alignItems: "center"
   },
   cancelText: { color: estavaCore.colors.textPrimary, fontWeight: "600" },
   submitBtn: {
+    flex: 1,
     minHeight: 44,
     paddingVertical: 10,
     paddingHorizontal: 20,
-    borderRadius: 8,
-    backgroundColor: estavaCore.colors.primary
+    borderRadius: 10,
+    backgroundColor: estavaCore.colors.primary,
+    alignItems: "center"
   },
   submitBtnDisabled: {
     opacity: 0.5

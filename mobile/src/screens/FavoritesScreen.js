@@ -218,14 +218,17 @@ export default function FavoritesScreen({ navigation }) {
                     )}
                     <View style={styles.metaChips}>
                       {!!property?.propertyType && (
-                        <Text style={styles.typeChip}>{property.propertyType}</Text>
+                        <Text style={styles.typeChip}>{getPropertyTypeLabel(property.propertyType)}</Text>
                       )}
-                      {property?.bedrooms != null && (
+                      {hasRooms(property?.propertyType) && property?.bedrooms != null ? (
                         <Text style={styles.metaText}>{property.bedrooms} bed</Text>
-                      )}
-                      {property?.bathrooms != null && (
+                      ) : null}
+                      {hasRooms(property?.propertyType) && property?.bathrooms != null ? (
                         <Text style={styles.metaText}>{property.bathrooms} bath</Text>
-                      )}
+                      ) : null}
+                      {!hasRooms(property?.propertyType) ? (
+                        <Text style={styles.metaText}>Area: {formatAreaSize(property?.areaSize)}</Text>
+                      ) : null}
                     </View>
                   </View>
 

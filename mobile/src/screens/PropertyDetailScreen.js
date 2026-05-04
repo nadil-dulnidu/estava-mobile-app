@@ -1,5 +1,5 @@
 // Screen component for user-facing workflow in the real-estate mobile app.
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -22,7 +22,7 @@ import { reviewApi } from "../api/reviewApi";
 import { useAuth } from "../context/AuthContext";
 import { estavaCore } from "../theme/estavaCore";
 import { pushRecentlyViewedProperty } from "../utils/recentlyViewedProperties";
-import { normalizeImageUrl } from "../utils/imageUrl";
+import { formatAreaSize, getPropertyTypeLabel, hasRooms } from "../utils/propertyDisplay";
 
 export default function PropertyDetailScreen({ route, navigation }) {
   const { propertyId } = route.params;
@@ -61,6 +61,7 @@ export default function PropertyDetailScreen({ route, navigation }) {
   const currentUserId = getNormalizedUserId(user);
   const ownerId = getNormalizedUserId(property?.createdBy);
   const isOwner = !!currentUserId && !!ownerId && String(currentUserId) === String(ownerId);
+  const canContactOwner = Boolean(user) && !isOwner;
 
   const renderStars = (value) => {
     const normalized = Math.max(0, Math.min(5, Math.round(Number(value) || 0)));
@@ -78,6 +79,15 @@ export default function PropertyDetailScreen({ route, navigation }) {
     const hours = String(value.getHours()).padStart(2, "0");
     const minutes = String(value.getMinutes()).padStart(2, "0");
     return `${hours}:${minutes}`;
+  };
+
+  const formatLabel = (value, fallback = "Not provided") => {
+    const normalized = String(value || "").trim();
+    if (!normalized) {
+      return fallback;
+    }
+
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
   };
 
   const getSafeErrorMessage = (fallback, err) => {
@@ -129,36 +139,38 @@ export default function PropertyDetailScreen({ route, navigation }) {
     }
   };
 
+  const loadPropertyData = useCallback(async () => {
+    let shouldLoadReviews = false;
+
+    setLoading(true);
+
+    try {
+      setError("");
+      const result = await getPropertyById(propertyId);
+      setProperty(result);
+      pushRecentlyViewedProperty(currentUserId, result?._id || propertyId);
+      await syncFavoriteState(result?._id || propertyId);
+      shouldLoadReviews = true;
+    } catch (fetchError) {
+      setProperty(null);
+      setFavoriteId("");
+      setIsFavorite(false);
+      setReviews([]);
+      setReviewStats({ avgRating: 0, total: 0 });
+      setReviewsError("");
+      setError(fetchError?.response?.data?.message || "Failed to load property details");
+    } finally {
+      setLoading(false);
+    }
+
+    if (shouldLoadReviews) {
+      await loadPropertyReviews();
+    }
+  }, [currentUserId, propertyId]);
+
   useEffect(() => {
-    const load = async () => {
-      let shouldLoadReviews = false;
-
-      try {
-        setError("");
-        const result = await getPropertyById(propertyId);
-        setProperty(result);
-        pushRecentlyViewedProperty(currentUserId, result?._id || propertyId);
-        await syncFavoriteState(result?._id || propertyId);
-        shouldLoadReviews = true;
-      } catch (fetchError) {
-        setProperty(null);
-        setFavoriteId("");
-        setIsFavorite(false);
-        setReviews([]);
-        setReviewStats({ avgRating: 0, total: 0 });
-        setReviewsError("");
-        setError(fetchError?.response?.data?.message || "Failed to load property details");
-      } finally {
-        setLoading(false);
-      }
-
-      if (shouldLoadReviews) {
-        await loadPropertyReviews();
-      }
-    };
-
-    load();
-  }, [propertyId]);
+    loadPropertyData();
+  }, [loadPropertyData]);
 
   const handleStatusUpdate = async (status) => {
     if (!isOwner || ownerActionLoading || property?.listingStatus === status) {
@@ -313,6 +325,9 @@ export default function PropertyDetailScreen({ route, navigation }) {
     return (
       <View style={styles.centered}>
         <Text style={styles.error}>{error}</Text>
+        <Pressable style={styles.retryButton} onPress={loadPropertyData}>
+          <Text style={styles.retryButtonText}>Try again</Text>
+        </Pressable>
       </View>
     );
   }
@@ -321,6 +336,9 @@ export default function PropertyDetailScreen({ route, navigation }) {
     return (
       <View style={styles.centered}>
         <Text style={styles.error}>Property not found.</Text>
+        <Pressable style={styles.retryButton} onPress={loadPropertyData}>
+          <Text style={styles.retryButtonText}>Reload property</Text>
+        </Pressable>
       </View>
     );
   }
@@ -342,7 +360,28 @@ export default function PropertyDetailScreen({ route, navigation }) {
       <Text style={styles.title}>{property.title}</Text>
       <Text style={styles.location}>{property.location}</Text>
       <Text style={styles.price}>LKR {Number(property.price || 0).toLocaleString()}</Text>
-      <Text style={styles.status}>Status: {property.listingStatus}</Text>
+      <Text style={styles.status}>Status: {formatLabel(property.listingStatus)}</Text>
+
+      <View style={styles.summaryRow}>
+        <View style={styles.summaryChip}>
+          <Text style={styles.summaryChipLabel}>{getPropertyTypeLabel(property.propertyType)}</Text>
+        </View>
+        <View style={styles.summaryChip}>
+          <Text style={styles.summaryChipLabel}>{reviewStats.avgRating.toFixed(1)} / 5 rating</Text>
+        </View>
+        <View style={styles.summaryChip}>
+          <Text style={styles.summaryChipLabel}>{reviewStats.total} review{reviewStats.total === 1 ? "" : "s"}</Text>
+        </View>
+      </View>
+
+      <View style={styles.nextStepCard}>
+        <Text style={styles.nextStepTitle}>{isOwner ? "Manage this listing" : "Take the next step"}</Text>
+        <Text style={styles.nextStepText}>
+          {isOwner
+            ? "Update status here or open the editor to change listing details and images."
+            : "Save the property, send an inquiry, or book a visit without leaving this page."}
+        </Text>
+      </View>
 
       {isOwner ? (
         <>
@@ -386,19 +425,37 @@ export default function PropertyDetailScreen({ route, navigation }) {
             favoriteActionLoading && styles.disabledControl
           ]}
           onPress={isFavorite ? handleRemoveFavorite : handleAddFavorite}
-          disabled={favoriteActionLoading}
+          disabled={favoriteActionLoading || !canContactOwner}
         >
-          <Text style={styles.actionButtonLabel}>{isFavorite ? "Favorited" : "Favorite"}</Text>
+          <Text style={[styles.actionButtonLabel, isFavorite && styles.actionButtonLabelActive]}>
+            {isFavorite ? "Saved" : "Favorite"}
+          </Text>
         </Pressable>
 
-        <Pressable style={styles.actionButton} onPress={openInquiryModal}>
+        <Pressable
+          style={[styles.actionButton, !canContactOwner && styles.disabledControl]}
+          onPress={openInquiryModal}
+          disabled={!canContactOwner}
+        >
           <Text style={styles.actionButtonLabel}>Inquiry</Text>
         </Pressable>
 
-        <Pressable style={styles.actionButton} onPress={() => setAppointmentModalVisible(true)}>
-          <Text style={styles.actionButtonLabel}>Appointment</Text>
+        <Pressable
+          style={[styles.actionButton, !canContactOwner && styles.disabledControl]}
+          onPress={() => setAppointmentModalVisible(true)}
+          disabled={!canContactOwner}
+        >
+          <Text style={styles.actionButtonLabel}>Book Visit</Text>
         </Pressable>
       </View>
+
+      {!canContactOwner ? (
+        <Text style={styles.actionHelpText}>
+          {isOwner
+            ? "Owner contact actions are hidden on your own listing."
+            : "Sign in to save this property, send inquiries, and book visits."}
+        </Text>
+      ) : null}
 
       <Text style={styles.sectionTitle}>Description</Text>
       <View style={styles.sectionCard}>
@@ -407,10 +464,14 @@ export default function PropertyDetailScreen({ route, navigation }) {
 
       <Text style={styles.sectionTitle}>Details</Text>
       <View style={styles.sectionCard}>
-        <Text style={styles.body}>Type: {property.propertyType}</Text>
-        <Text style={styles.body}>Bedrooms: {property.bedrooms ?? 0}</Text>
-        <Text style={styles.body}>Bathrooms: {property.bathrooms ?? 0}</Text>
-        <Text style={styles.body}>Area Size: {property.areaSize ?? 0}</Text>
+        <Text style={styles.body}>Type: {getPropertyTypeLabel(property.propertyType)}</Text>
+        {hasRooms(property.propertyType) ? (
+          <>
+            <Text style={styles.body}>Bedrooms: {property.bedrooms ?? 0}</Text>
+            <Text style={styles.body}>Bathrooms: {property.bathrooms ?? 0}</Text>
+          </>
+        ) : null}
+        <Text style={styles.body}>Area Size: {formatAreaSize(property.areaSize)}</Text>
       </View>
 
       {Array.isArray(property.features) && property.features.length > 0 ? (
@@ -639,6 +700,44 @@ const styles = StyleSheet.create({
     marginTop: 8,
     color: estavaCore.colors.textSecondary
   },
+  summaryRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 12
+  },
+  summaryChip: {
+    backgroundColor: estavaCore.colors.surface,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
+    paddingHorizontal: 10,
+    paddingVertical: 6
+  },
+  summaryChipLabel: {
+    color: estavaCore.colors.textPrimary,
+    fontSize: 12,
+    fontWeight: "700"
+  },
+  nextStepCard: {
+    marginTop: 14,
+    padding: 14,
+    borderRadius: 14,
+    backgroundColor: estavaCore.colors.surface,
+    borderWidth: 1,
+    borderColor: estavaCore.colors.border,
+    ...estavaCore.shadow.card
+  },
+  nextStepTitle: {
+    color: estavaCore.colors.primary,
+    fontSize: 16,
+    fontWeight: "700"
+  },
+  nextStepText: {
+    marginTop: 6,
+    color: estavaCore.colors.textSecondary,
+    lineHeight: 20
+  },
   ownerHint: {
     color: "#6b7280",
     marginBottom: 10
@@ -721,6 +820,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     color: estavaCore.colors.textPrimary
+  },
+  actionButtonLabelActive: {
+    color: estavaCore.colors.accent
+  },
+  actionHelpText: {
+    marginTop: -6,
+    marginBottom: 8,
+    color: estavaCore.colors.textSecondary,
+    fontSize: 12
   },
   imageRow: {
     marginBottom: 12
@@ -828,6 +936,17 @@ const styles = StyleSheet.create({
   error: {
     color: estavaCore.colors.danger,
     textAlign: "center"
+  },
+  retryButton: {
+    marginTop: 14,
+    backgroundColor: estavaCore.colors.primary,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10
+  },
+  retryButtonText: {
+    color: "#ffffff",
+    fontWeight: "700"
   },
   modalOverlay: {
     flex: 1,

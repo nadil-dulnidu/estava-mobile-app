@@ -53,9 +53,9 @@ export const estavaCore = {
   shadow: {
     card: {
       shadowColor: "#0f172a",
-      shadowOpacity: 0.06,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 4 },
       elevation: 2
     }
   }

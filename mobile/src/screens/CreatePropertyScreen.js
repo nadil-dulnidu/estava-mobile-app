@@ -1,5 +1,5 @@
 // Screen for posting new property listings from the mobile app.
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import { createProperty } from "../api/propertyApi";
 import { estavaCore } from "../theme/estavaCore";
+import { PROPERTY_TYPE_OPTIONS, hasRooms } from "../utils/propertyDisplay";
 
 const MAX_FEATURES = 20;
 const MAX_FEATURE_LENGTH = 50;
@@ -85,6 +86,7 @@ export default function CreatePropertyScreen({ navigation }) {
   const [selectedImages, setSelectedImages] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const showRoomFields = useMemo(() => hasRooms(propertyType), [propertyType]);
 
   const onPickImages = async () => {
     setError("");
@@ -134,13 +136,13 @@ export default function CreatePropertyScreen({ navigation }) {
       return;
     }
 
-    const parsedBedrooms = parseNonNegativeNumber(bedrooms);
+    const parsedBedrooms = parseNonNegativeNumber(showRoomFields ? bedrooms : "0");
     if (!parsedBedrooms.isValid) {
       setError("Bedrooms must be a non-negative number.");
       return;
     }
 
-    const parsedBathrooms = parseNonNegativeNumber(bathrooms);
+    const parsedBathrooms = parseNonNegativeNumber(showRoomFields ? bathrooms : "0");
     if (!parsedBathrooms.isValid) {
       setError("Bathrooms must be a non-negative number.");
       return;
@@ -167,8 +169,8 @@ export default function CreatePropertyScreen({ navigation }) {
         price: parsedPrice.value,
         propertyType,
         listingStatus,
-        bedrooms: parsedBedrooms.value,
-        bathrooms: parsedBathrooms.value,
+        bedrooms: showRoomFields ? parsedBedrooms.value : 0,
+        bathrooms: showRoomFields ? parsedBathrooms.value : 0,
         areaSize: parsedAreaSize.value,
         features,
         images: selectedImages
@@ -237,16 +239,17 @@ export default function CreatePropertyScreen({ navigation }) {
 
       <Text style={styles.label}>Property Type</Text>
       <View style={styles.row}>
-        {[
-          { label: "Apartment", value: "apartment" },
-          { label: "House", value: "house" },
-          { label: "Land", value: "land" },
-          { label: "Commercial", value: "commercial" }
-        ].map((option) => (
+        {PROPERTY_TYPE_OPTIONS.map((option) => (
           <Pressable
             key={option.value}
             style={[styles.chip, propertyType === option.value && styles.chipActive]}
-            onPress={() => setPropertyType(option.value)}
+            onPress={() => {
+              setPropertyType(option.value);
+              if (!hasRooms(option.value)) {
+                setBedrooms("");
+                setBathrooms("");
+              }
+            }}
           >
             <Text style={[styles.chipText, propertyType === option.value && styles.chipTextActive]}>
               {option.label}
@@ -274,30 +277,30 @@ export default function CreatePropertyScreen({ navigation }) {
         ))}
       </View>
 
-      <View style={styles.inlineInputs}>
-        <View style={styles.inlineField}>
-          <Text style={styles.inputLabel}>Bedrooms</Text>
-          <TextInput
-            style={[styles.input, styles.inlineInput]}
-            placeholder="e.g. 3"
-            placeholderTextColor={estavaCore.colors.textSecondary}
-            keyboardType="numeric"
-            value={bedrooms}
-            onChangeText={setBedrooms}
-          />
+      {showRoomFields ? (
+        <View style={styles.inlineInputs}>
+          <View style={styles.inlineField}>
+            <Text style={styles.inputLabel}>Bedrooms</Text>
+            <TextInput
+              style={[styles.input, styles.inlineInput]}
+              placeholder="e.g. 3"
+              keyboardType="numeric"
+              value={bedrooms}
+              onChangeText={setBedrooms}
+            />
+          </View>
+          <View style={styles.inlineField}>
+            <Text style={styles.inputLabel}>Bathrooms</Text>
+            <TextInput
+              style={[styles.input, styles.inlineInput]}
+              placeholder="e.g. 2"
+              keyboardType="numeric"
+              value={bathrooms}
+              onChangeText={setBathrooms}
+            />
+          </View>
         </View>
-        <View style={styles.inlineField}>
-          <Text style={styles.inputLabel}>Bathrooms</Text>
-          <TextInput
-            style={[styles.input, styles.inlineInput]}
-            placeholder="e.g. 2"
-            placeholderTextColor={estavaCore.colors.textSecondary}
-            keyboardType="numeric"
-            value={bathrooms}
-            onChangeText={setBathrooms}
-          />
-        </View>
-      </View>
+      ) : null}
 
       <Text style={styles.inputLabel}>Land / Area Size (sqft)</Text>
       <TextInput

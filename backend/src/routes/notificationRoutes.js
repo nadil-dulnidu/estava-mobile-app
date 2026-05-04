@@ -9,6 +9,7 @@ router.use(protect);
 
 router.post("/", authorize("admin"), controller.create);
 router.get("/me", controller.listMine);
+router.patch("/read-all", controller.markAllRead);
 router.patch("/:id/read", controller.markRead);
 router.delete("/:id", controller.remove);
 

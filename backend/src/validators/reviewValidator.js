@@ -2,6 +2,18 @@
 const mongoose = require("mongoose");
 const AppError = require("../utils/AppError");
 
+const validateReviewIdParam = (reviewId) => {
+  if (!reviewId || !mongoose.Types.ObjectId.isValid(reviewId)) {
+    throw new AppError("Valid review id is required", 400);
+  }
+};
+
+const validateReviewTargetId = (targetId, label) => {
+  if (!targetId || !mongoose.Types.ObjectId.isValid(targetId)) {
+    throw new AppError(`Valid ${label} is required`, 400);
+  }
+};
+
 const validateCreateReviewInput = (payload) => {
   const { propertyId, rating, comment } = payload;
 
@@ -37,6 +49,8 @@ const validateUpdateReviewInput = (payload) => {
 };
 
 module.exports = {
+  validateReviewIdParam,
+  validateReviewTargetId,
   validateCreateReviewInput,
   validateUpdateReviewInput
 };

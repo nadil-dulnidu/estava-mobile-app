@@ -1,6 +1,12 @@
 // Global auth state management for login, registration, and session handling.
-import React, { createContext, useContext, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import apiClient, { setAuthToken } from "../api/client";
+import {
+  connectNotificationSocket,
+  disconnectNotificationSocket,
+  subscribeToNotifications
+} from "../realtime/notificationSocket";
+import { notificationApi } from "../api/notificationApi";
 import {
   getProfile,
   updateProfile as updateProfileRequest,
@@ -14,6 +20,25 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+
+  const refreshUnreadNotificationCount = async () => {
+    if (!token) {
+      setUnreadNotificationCount(0);
+      return { ok: true, count: 0 };
+    }
+
+    try {
+      const response = await notificationApi.getNotifications();
+      const items = Array.isArray(response?.data?.data) ? response.data.data : [];
+      const unreadCount = items.filter((item) => item?.status === "unread").length;
+      setUnreadNotificationCount(unreadCount);
+      return { ok: true, count: unreadCount };
+    } catch (error) {
+      const message = error?.response?.data?.message || error?.message || "Failed to load notifications";
+      return { ok: false, message };
+    }
+  };
 
   const login = async (email, password) => {
     setLoading(true);
@@ -42,6 +67,7 @@ export function AuthProvider({ children }) {
       setUser(payload.user);
       setToken(payload.token);
       setAuthToken(payload.token);
+      connectNotificationSocket(payload.token);
       return { ok: true };
     } catch (error) {
       const message = error?.response?.data?.message || "Login failed";
@@ -118,6 +144,7 @@ export function AuthProvider({ children }) {
       setUser(payload.user);
       setToken(payload.token);
       setAuthToken(payload.token);
+      connectNotificationSocket(payload.token);
       return { ok: true };
     } catch (error) {
       const message = error?.response?.data?.message || "Registration failed";
@@ -128,10 +155,30 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
+    disconnectNotificationSocket();
+    setUnreadNotificationCount(0);
     setUser(null);
     setToken(null);
     setAuthToken(null);
   };
+
+  useEffect(() => {
+    if (!token) {
+      setUnreadNotificationCount(0);
+      return undefined;
+    }
+
+    connectNotificationSocket(token);
+    void refreshUnreadNotificationCount();
+
+    return subscribeToNotifications((notification) => {
+      if (notification?.status === "unread") {
+        setUnreadNotificationCount((currentCount) => currentCount + 1);
+      } else {
+        void refreshUnreadNotificationCount();
+      }
+    });
+  }, [token]);
 
   const value = useMemo(
     () => ({
@@ -145,9 +192,11 @@ export function AuthProvider({ children }) {
       updateProfile,
       changePassword,
       updateAvatar,
-      isAuthenticated: !!token
+      isAuthenticated: !!token,
+      unreadNotificationCount,
+      refreshUnreadNotificationCount
     }),
-    [user, token, loading]
+    [user, token, loading, unreadNotificationCount]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,7 +1,11 @@
 // Service layer: encapsulates business rules and database operations.
 const Property = require("../models/Property");
+const Favorite = require("../models/Favorite");
+const Inquiry = require("../models/Inquiry");
+const Appointment = require("../models/Appointment");
 const AppError = require("../utils/AppError");
 const { deleteManyLocalFilesByUrls } = require("../utils/fileStorage");
+const { createAndDispatchNotification } = require("./notificationService");
 
 const CREATE_ALLOWED_FIELDS = [
   "title",
@@ -60,6 +64,60 @@ const buildCreatePayload = (payload, createdBy, imageUrls) => {
   data.imageUrls = Array.isArray(imageUrls) ? imageUrls : [];
 
   return data;
+};
+
+const notifyInterestedUsersAboutPropertyUpdate = async (property, previousState) => {
+  if (!property || !previousState) {
+    return;
+  }
+
+  const titleChanged = previousState.title !== property.title;
+  const statusChanged = previousState.listingStatus !== property.listingStatus;
+  const priceChanged = Number(previousState.price) !== Number(property.price);
+
+  if (!titleChanged && !statusChanged && !priceChanged) {
+    return;
+  }
+
+  const [favoriteUserIds, inquiryUserIds, appointmentUserIds] = await Promise.all([
+    Favorite.distinct("userId", { propertyId: property._id }),
+    Inquiry.distinct("senderUserId", { propertyId: property._id }),
+    Appointment.distinct("userId", {
+      propertyId: property._id,
+      appointmentStatus: { $in: ["pending", "confirmed"] }
+    })
+  ]);
+
+  const recipientIds = new Set(
+    [...favoriteUserIds, ...inquiryUserIds, ...appointmentUserIds]
+      .map((value) => String(value || ""))
+      .filter(Boolean)
+      .filter((value) => value !== String(property.createdBy))
+  );
+
+  if (recipientIds.size === 0) {
+    return;
+  }
+
+  let summary = "The listing was updated.";
+  if (statusChanged) {
+    summary = `The listing is now ${property.listingStatus}.`;
+  } else if (priceChanged) {
+    summary = `The price changed to LKR ${Number(property.price || 0).toLocaleString()}.`;
+  } else if (titleChanged) {
+    summary = "The listing details were updated.";
+  }
+
+  await Promise.all(
+    Array.from(recipientIds).map((userId) =>
+      createAndDispatchNotification({
+        userId,
+        title: `Property update: ${property.title}`,
+        message: `${summary} Open Properties to view the latest details.`,
+        type: "listing"
+      })
+    )
+  );
 };
 
 const createProperty = async (payload, createdBy, imageUrls) => {
@@ -173,6 +231,11 @@ const updateProperty = async (id, payload, imageUrls, currentUser) => {
   }
 
   const data = mapNumericFields(payload);
+  const previousState = {
+    title: property.title,
+    price: property.price,
+    listingStatus: property.listingStatus
+  };
 
   const removeImageUrls = Array.isArray(data.removeImageUrls) ? data.removeImageUrls : [];
   const replaceImages = data.replaceImages === true;
@@ -203,6 +266,7 @@ const updateProperty = async (id, payload, imageUrls, currentUser) => {
   }
 
   await property.save();
+  await notifyInterestedUsersAboutPropertyUpdate(property, previousState);
   return property;
 };
 

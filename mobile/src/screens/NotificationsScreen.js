@@ -1,5 +1,5 @@
 // Notifications screen for system alerts and user notifications
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -10,56 +10,138 @@ import {
 } from "react-native";
 import { notificationApi } from "../api/notificationApi";
 import { estavaCore } from "../theme/estavaCore";
-import { BellIcon, CalendarIcon, GridIcon, HeartIcon, InboxIcon, StarIcon } from "../components/AppIcons";
+import { BellIcon, CalendarIcon, GridIcon, InboxIcon, StarIcon } from "../components/AppIcons";
+import { subscribeToNotifications } from "../realtime/notificationSocket";
+import { useAuth } from "../context/AuthContext";
 
-export default function NotificationsScreen() {
+export default function NotificationsScreen({ navigation }) {
+  const { refreshUnreadNotificationCount } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    loadNotifications();
+  const unreadCount = notifications.filter((notification) => notification.status === "unread").length;
+
+  const mergeNotification = useCallback((incomingNotification) => {
+    if (!incomingNotification?._id) {
+      return;
+    }
+
+    setNotifications((currentNotifications) => {
+      const existingIndex = currentNotifications.findIndex((item) => item._id === incomingNotification._id);
+      if (existingIndex >= 0) {
+        const next = currentNotifications.slice();
+        next[existingIndex] = {
+          ...currentNotifications[existingIndex],
+          ...incomingNotification
+        };
+        return next;
+      }
+
+      return [incomingNotification, ...currentNotifications];
+    });
   }, []);
 
-  const loadNotifications = async () => {
+  const loadNotifications = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
       const res = await notificationApi.getNotifications();
-      setNotifications(res.data.data || []);
+      const items = res.data.data || [];
+      setNotifications(items);
+      void refreshUnreadNotificationCount();
     } catch (err) {
       // Retry once for transient cold-start/network failures.
       try {
         const retryRes = await notificationApi.getNotifications();
-        setNotifications(retryRes.data.data || []);
+        const items = retryRes.data.data || [];
+        setNotifications(items);
+        void refreshUnreadNotificationCount();
       } catch (retryErr) {
         setError(retryErr?.response?.data?.message || retryErr?.message || "Failed to load notifications");
       }
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadNotifications();
+  }, [loadNotifications]);
+
+  useEffect(() => {
+    return subscribeToNotifications((incomingNotification) => {
+      mergeNotification(incomingNotification);
+    });
+  }, [mergeNotification]);
 
   const onMarkAsRead = async (notificationId) => {
+    setError("");
     try {
       await notificationApi.markAsRead(notificationId);
-      setNotifications(
-        notifications.map((n) =>
+      setNotifications((currentNotifications) =>
+        currentNotifications.map((n) =>
           n._id === notificationId ? { ...n, status: "read" } : n
         )
       );
+      void refreshUnreadNotificationCount();
     } catch (err) {
-      setError("Failed to mark as read");
+      setError(err?.response?.data?.message || err?.message || "Failed to mark as read");
+    }
+  };
+
+  const onMarkAllAsRead = async () => {
+    if (unreadCount === 0) {
+      return;
+    }
+
+    setError("");
+    try {
+      await notificationApi.markAllAsRead();
+      setNotifications((currentNotifications) =>
+        currentNotifications.map((notification) => ({
+          ...notification,
+          status: "read"
+        }))
+      );
+      void refreshUnreadNotificationCount();
+    } catch (err) {
+      setError(err?.response?.data?.message || err?.message || "Failed to mark all as read");
     }
   };
 
   const onDelete = async (notificationId) => {
+    setError("");
     try {
       await notificationApi.deleteNotification(notificationId);
-      setNotifications(notifications.filter((n) => n._id !== notificationId));
+      setNotifications((currentNotifications) =>
+        currentNotifications.filter((n) => n._id !== notificationId)
+      );
+      void refreshUnreadNotificationCount();
     } catch (err) {
-      setError("Failed to delete notification");
+      setError(err?.response?.data?.message || err?.message || "Failed to delete notification");
     }
+  };
+
+  const getNotificationDestination = (type) => {
+    const destinations = {
+      inquiry: { route: "Inquiries", label: "Open inquiries" },
+      appointment: { route: "Appointments", label: "Open appointments" },
+      listing: { route: "PropertyList", label: "Open listings" },
+      review: { route: "Reviews", label: "Open reviews" },
+      system: { route: "Home", label: "Open home" }
+    };
+
+    return destinations[type] || destinations.system;
+  };
+
+  const onOpenNotification = async (item) => {
+    if (item?.status === "unread") {
+      await onMarkAsRead(item._id);
+    }
+
+    const destination = getNotificationDestination(item?.type);
+    navigation.navigate(destination.route);
   };
 
   if (loading) return <ActivityIndicator style={{ marginTop: 20 }} size="large" color={estavaCore.colors.accent} />;
@@ -68,17 +150,33 @@ export default function NotificationsScreen() {
     const icons = {
       inquiry: InboxIcon,
       appointment: CalendarIcon,
-      property: GridIcon,
+      listing: GridIcon,
       review: StarIcon,
       system: BellIcon
     };
-    return icons[type] || InboxIcon;
+    return icons[type] || BellIcon;
+  };
+
+  const formatTimestamp = (value) => {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? "Unknown date" : parsed.toLocaleString();
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Notifications</Text>
-      <Text style={styles.subtitle}>Updates from inquiries, appointments, and your account.</Text>
+      <View style={styles.headerRow}>
+        <View style={styles.headerCopy}>
+          <Text style={styles.title}>Notifications</Text>
+          <Text style={styles.subtitle}>Updates from inquiries, appointments, and your account.</Text>
+        </View>
+        <Pressable
+          onPress={onMarkAllAsRead}
+          disabled={unreadCount === 0}
+          style={[styles.markAllButton, unreadCount === 0 && styles.markAllButtonDisabled]}
+        >
+          <Text style={styles.markAllButtonText}>Read all</Text>
+        </Pressable>
+      </View>
       {!!error && <Text style={styles.error}>{error}</Text>}
 
       {notifications.length === 0 ? (
@@ -87,8 +185,18 @@ export default function NotificationsScreen() {
         <FlatList
           data={notifications}
           keyExtractor={(item) => item._id}
-          renderItem={({ item }) => (
-            <View style={[styles.card, item.status === "unread" && styles.cardUnread]}>
+          onRefresh={loadNotifications}
+          refreshing={loading}
+          renderItem={({ item }) => {
+            const destination = getNotificationDestination(item?.type);
+
+            return (
+            <Pressable
+              style={[styles.card, item.status === "unread" && styles.cardUnread]}
+              onPress={() => onOpenNotification(item)}
+              accessibilityRole="button"
+              accessibilityLabel={`${item.title}. ${destination.label}`}
+            >
               <View style={styles.iconWrap}>
                 {(() => {
                   const Icon = getIcon(item.type);
@@ -99,21 +207,39 @@ export default function NotificationsScreen() {
                 <Text style={styles.itemTitle}>{item.title}</Text>
                 <Text style={styles.message}>{item.message}</Text>
                 <Text style={styles.timestamp}>
-                  {new Date(item.createdAt).toLocaleString()}
+                  {formatTimestamp(item.createdAt)}
                 </Text>
+                <Text style={styles.openHint}>{destination.label}</Text>
               </View>
               <View style={styles.actions}>
                 {item.status === "unread" && (
-                  <Pressable onPress={() => onMarkAsRead(item._id)} style={styles.actionBtn}>
+                  <Pressable
+                    onPress={(event) => {
+                      event.stopPropagation?.();
+                      onMarkAsRead(item._id);
+                    }}
+                    style={styles.actionBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel="Mark notification as read"
+                  >
                     <Text style={styles.actionText}>✓</Text>
                   </Pressable>
                 )}
-                <Pressable onPress={() => onDelete(item._id)} style={styles.deleteBtn}>
+                <Pressable
+                  onPress={(event) => {
+                    event.stopPropagation?.();
+                    onDelete(item._id);
+                  }}
+                  style={styles.deleteBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel="Delete notification"
+                >
                   <Text style={styles.deleteText}>✕</Text>
                 </Pressable>
               </View>
-            </View>
-          )}
+            </Pressable>
+            );
+          }}
         />
       )}
     </View>
@@ -121,15 +247,35 @@ export default function NotificationsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: estavaCore.colors.background },
+  container: { flex: 1, padding: 18, backgroundColor: estavaCore.colors.background },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12
+  },
+  headerCopy: { flex: 1 },
   title: { fontSize: 24, fontWeight: "700", marginBottom: 4, color: estavaCore.colors.primary },
   subtitle: { color: estavaCore.colors.textSecondary, marginBottom: 14 },
+  markAllButton: {
+    backgroundColor: estavaCore.colors.accentSoft,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8
+  },
+  markAllButtonDisabled: {
+    opacity: 0.45
+  },
+  markAllButtonText: {
+    color: estavaCore.colors.accent,
+    fontWeight: "700"
+  },
   error: { color: estavaCore.colors.danger, marginBottom: 8 },
   emptyText: { textAlign: "center", color: estavaCore.colors.textSecondary, marginTop: 20 },
   card: {
     backgroundColor: estavaCore.colors.surface,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 12,
+    padding: 14,
     marginBottom: 12,
     flexDirection: "row",
     alignItems: "flex-start",
@@ -143,8 +289,8 @@ const styles = StyleSheet.create({
     borderLeftColor: estavaCore.colors.accent
   },
   iconWrap: {
-    width: 32,
-    height: 32,
+    width: 36,
+    height: 36,
     borderRadius: 10,
     backgroundColor: estavaCore.colors.accentSoft,
     alignItems: "center",
@@ -155,9 +301,10 @@ const styles = StyleSheet.create({
   itemTitle: { fontSize: 14, fontWeight: "600", color: estavaCore.colors.textPrimary },
   message: { fontSize: 13, color: estavaCore.colors.textSecondary, marginTop: 4 },
   timestamp: { fontSize: 11, color: estavaCore.colors.textSecondary, marginTop: 4 },
-  actions: { flexDirection: "row", gap: 8 },
-  actionBtn: { paddingVertical: 6, paddingHorizontal: 8 },
+  openHint: { fontSize: 12, color: estavaCore.colors.accent, fontWeight: "700", marginTop: 8 },
+  actions: { flexDirection: "row", gap: 6 },
+  actionBtn: { minWidth: 34, minHeight: 34, alignItems: "center", justifyContent: "center" },
   actionText: { color: estavaCore.colors.accent, fontWeight: "700", fontSize: 16 },
-  deleteBtn: { paddingVertical: 6, paddingHorizontal: 8 },
+  deleteBtn: { minWidth: 34, minHeight: 34, alignItems: "center", justifyContent: "center" },
   deleteText: { color: estavaCore.colors.danger, fontWeight: "700", fontSize: 16 }
 });
