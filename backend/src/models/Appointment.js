@@ -1,4 +1,4 @@
-// Data model for visit bookings linked to property and participants.
+// Data model for visits bookings linked to property and participants.
 const mongoose = require("mongoose");
 
 const appointmentSchema = new mongoose.Schema(
