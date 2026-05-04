@@ -26,11 +26,29 @@ const buildStorage = (uploadDir) => multer.diskStorage({
 });
 
 const fileFilter = (_req, file, cb) => {
-  const allowed = ["image/jpeg", "image/png", "image/webp"];
-  if (!allowed.includes(file.mimetype)) {
-    return cb(new AppError("Only JPG, PNG, and WEBP images are allowed", 400));
+  // Accept common image mime types; if mimetype is missing or unusual (Expo Go),
+  // fall back to checking the file extension from the original filename.
+  const allowedMimeTypes = [
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/webp",
+    "image/heic",
+    "image/heif"
+  ];
+
+  const allowedExtensions = [".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"];
+
+  if (file && file.mimetype && allowedMimeTypes.includes(file.mimetype.toLowerCase())) {
+    return cb(null, true);
   }
-  return cb(null, true);
+
+  const ext = path.extname(String(file.originalname || "")).toLowerCase();
+  if (ext && allowedExtensions.includes(ext)) {
+    return cb(null, true);
+  }
+
+  return cb(new AppError("Only JPG, PNG, WEBP and HEIC images are allowed", 400));
 };
 
 const uploadPropertyImages = multer({

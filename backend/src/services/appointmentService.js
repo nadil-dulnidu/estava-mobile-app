@@ -121,12 +121,17 @@ const updateAppointment = async (appointmentId, payload, user) => {
   const hasDateOrTimeUpdate = payload.date !== undefined || payload.time !== undefined;
   const resultingStatus = nextStatus !== undefined ? nextStatus : currentStatus;
 
-  if (
-    !isAdmin &&
-    hasDateOrTimeUpdate &&
-    TERMINAL_APPOINTMENT_STATUSES.includes(resultingStatus)
-  ) {
-    throw new AppError("Date or time cannot be updated for completed or cancelled appointments", 400);
+  if (!isAdmin && TERMINAL_APPOINTMENT_STATUSES.includes(resultingStatus)) {
+    // If client attempted to send date/time alongside a terminal status, allow
+    // it only when the provided values are identical to the existing ones.
+    const dateChanged =
+      payload.date !== undefined && String(payload.date) !== String(appointment.date);
+    const timeChanged =
+      payload.time !== undefined && String(payload.time) !== String(appointment.time);
+
+    if (dateChanged || timeChanged) {
+      throw new AppError("Date or time cannot be updated for completed or cancelled appointments", 400);
+    }
   }
 
   if (nextStatus !== undefined && nextStatus !== currentStatus) {

@@ -1,6 +1,24 @@
 // Profile API client for authenticated user profile operations.
 import apiClient from "./client";
 
+const mimeFromExtension = (uri) => {
+  const ext = String(uri || "").split("?")[0].split(".").pop().toLowerCase();
+  switch (ext) {
+    case "png":
+      return "image/png";
+    case "webp":
+      return "image/webp";
+    case "heic":
+    case "heif":
+      return "image/heic";
+    case "jpg":
+    case "jpeg":
+      return "image/jpeg";
+    default:
+      return "image/jpeg";
+  }
+};
+
 const buildAvatarFormData = async (image) => {
   const formData = new FormData();
 
@@ -16,7 +34,7 @@ const buildAvatarFormData = async (image) => {
     // In React Native/Expo, FormData handles file:// and content:// URIs directly.
     formData.append("avatar", {
       uri: image.uri,
-      type: image.mimeType || "image/jpeg",
+      type: image.mimeType || mimeFromExtension(image.uri),
       name: fileName
     });
   } catch (error) {

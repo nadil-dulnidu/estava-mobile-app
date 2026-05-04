@@ -1,6 +1,24 @@
 // API client helpers for backend communication and module-specific requests.
 import apiClient from "./client";
 
+const mimeFromExtension = (uri) => {
+  const ext = String(uri || "").split("?")[0].split(".").pop().toLowerCase();
+  switch (ext) {
+    case "png":
+      return "image/png";
+    case "webp":
+      return "image/webp";
+    case "heic":
+    case "heif":
+      return "image/heic";
+    case "jpg":
+    case "jpeg":
+      return "image/jpeg";
+    default:
+      return "image/jpeg";
+  }
+};
+
 const buildPropertyCreateFormData = async (payload) => {
   const formData = new FormData();
 
@@ -38,10 +56,10 @@ const buildPropertyCreateFormData = async (payload) => {
         const fileName = image.fileName || fallbackName;
 
         // Directly append the image object with URI, type, and name.
-        // React Native FormData will handle file:// and content:// URIs.
+        // Use provided mimeType if available, otherwise infer from extension.
         formData.append("images", {
           uri: image.uri,
-          type: image.mimeType || "image/jpeg",
+          type: image.mimeType || mimeFromExtension(image.uri),
           name: fileName
         });
       } catch (error) {
@@ -103,10 +121,10 @@ const buildPropertyUpdateFormData = async (payload) => {
         const fileName = image.fileName || fallbackName;
 
         // Directly append the image object with URI, type, and name.
-        // React Native FormData will handle file:// and content:// URIs.
+        // Use provided mimeType if available, otherwise infer from extension.
         formData.append("images", {
           uri: image.uri,
-          type: image.mimeType || "image/jpeg",
+          type: image.mimeType || mimeFromExtension(image.uri),
           name: fileName
         });
       } catch (error) {
