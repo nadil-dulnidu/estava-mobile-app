@@ -91,7 +91,7 @@ const listAppointmentsForUser = async (user) => {
     .sort({ createdAt: -1 });
 };
 
-const updateAppointment = async (appointmentId, payload, user) => {
+const updateAppointment = async (appointmentId, payload, user) => {  //update part in service
   const appointment = await Appointment.findById(appointmentId);
   if (!appointment) {
     throw new AppError("Appointment not found", 404);
