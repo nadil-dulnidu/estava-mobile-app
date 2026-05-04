@@ -67,7 +67,7 @@ const list = catchAsync(async (req, res) => {
 
 const listMine = catchAsync(async (req, res) => {
   validateListPropertiesQuery(req.query, { allowDelistedStatusFilter: true });
-  const result = await listMyProperties(req.query, req.user._id);
+  const result = await listMyProperties(req.query, req.user);
   return successResponse(res, result, "Your properties fetched successfully", 200);
 });
 

@@ -125,11 +125,11 @@ const listProperties = async (query, options = {}) => {
   };
 };
 
-const listMyProperties = async (query, currentUserId) => {
+const listMyProperties = async (query, currentUser) => {
   return listProperties(query, {
-    ownerId: currentUserId,
     includeDelisted: true,
-    includeOwnerPrivateData: true
+    includeOwnerPrivateData: true,
+    ...(currentUser?.role === "admin" ? {} : { ownerId: currentUser._id })
   });
 };
 
