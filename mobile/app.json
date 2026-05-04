@@ -5,6 +5,10 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "updates": {
+      "enabled": false,
+      "url": "https://u.expo.dev/4fd373d5-5ee3-4534-ac6c-6a0da6c90d34"
+    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -16,8 +20,12 @@
     },
     "extra": {
       "eas": {
-        "projectId": "130e5999-a59f-47d1-8460-d1751685ba67"
+        "projectId": "4fd373d5-5ee3-4534-ac6c-6a0da6c90d34"
       }
+    },
+    "owner": "dewnethmi11",
+    "runtimeVersion": {
+      "policy": "appVersion"
     }
   }
 }
