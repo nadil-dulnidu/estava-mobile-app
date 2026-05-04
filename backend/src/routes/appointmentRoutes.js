@@ -1,4 +1,4 @@
-// Route definitions for appointment module endpoints.
+// Routes definitions for appointment module endpoints.
 const express = require("express");
 const { protect } = require("../middlewares/authMiddleware");
 const controller = require("../controllers/appointmentController");
