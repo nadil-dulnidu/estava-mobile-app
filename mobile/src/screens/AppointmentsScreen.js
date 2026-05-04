@@ -173,11 +173,15 @@ export default function AppointmentsScreen({ navigation }) {
 
     setSavingEdit(true);
     try {
-      await appointmentApi.updateAppointment(editingAppointmentId, {
-        date: formatDateValue(editDate),
-        time: formatTimeValue(editTime),
-        appointmentStatus: editStatus
-      });
+      const nextPayload = { appointmentStatus: editStatus };
+      const isTerminalStatus = editStatus === "completed" || editStatus === "cancelled";
+
+      if (!isTerminalStatus) {
+        nextPayload.date = formatDateValue(editDate);
+        nextPayload.time = formatTimeValue(editTime);
+      }
+
+      await appointmentApi.updateAppointment(editingAppointmentId, nextPayload);
       closeEditModal();
       await loadAppointments();
     } catch (err) {

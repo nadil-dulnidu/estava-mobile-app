@@ -5,11 +5,13 @@ const Notification = require("../models/Notification");
 const AppError = require("../utils/AppError");
 
 const SELLER_ALLOWED_STATUS_TRANSITIONS = {
-  pending: ["confirmed", "cancelled"],
+  pending: ["confirmed", "cancelled", "completed"],
   confirmed: ["completed", "cancelled"],
   completed: [],
   cancelled: []
 };
+
+const TERMINAL_STATUS_SOURCE_STATUSES = ["pending", "confirmed"];
 
 const DELETABLE_APPOINTMENT_STATUSES = ["cancelled", "completed"];
 const TERMINAL_APPOINTMENT_STATUSES = ["completed", "cancelled"];
@@ -132,6 +134,14 @@ const updateAppointment = async (appointmentId, payload, user) => {
   if (nextStatus !== undefined && nextStatus !== currentStatus) {
     if (isAdmin) {
       // Admin may force transitions for support/operations use-cases.
+    } else if (nextStatus === "completed") {
+      if (!isBuyer && !isSeller) {
+        throw new AppError("You do not have permission to update this appointment", 403);
+      }
+
+      if (!TERMINAL_STATUS_SOURCE_STATUSES.includes(currentStatus)) {
+        throw new AppError(`Invalid status transition from ${currentStatus} to ${nextStatus}`, 400);
+      }
     } else if (isBuyer) {
       if (nextStatus !== "cancelled") {
         throw new AppError("Buyer can only update status to cancelled", 403);

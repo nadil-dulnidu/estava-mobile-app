@@ -26,8 +26,11 @@ const buildStorage = (uploadDir) => multer.diskStorage({
 });
 
 const fileFilter = (_req, file, cb) => {
-  const allowed = ["image/jpeg", "image/png", "image/webp"];
-  if (!allowed.includes(file.mimetype)) {
+  const mimeType = String(file.mimetype || "").toLowerCase();
+  const extension = path.extname(String(file.originalname || "")).toLowerCase();
+  const allowedExtensions = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic", ".heif"];
+
+  if (!mimeType.startsWith("image/") && !allowedExtensions.includes(extension)) {
     return cb(new AppError("Only JPG, PNG, and WEBP images are allowed", 400));
   }
   return cb(null, true);
