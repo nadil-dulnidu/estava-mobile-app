@@ -35,8 +35,13 @@ const update = catchAsync(async (req, res) => {
 
 const remove = catchAsync(async (req, res) => {
   validateInquiryIdParam(req.params.id);
-  await deleteInquiry(req.params.id, req.user);
-  return successResponse(res, null, "Inquiry deleted successfully", 200);
+  const result = await deleteInquiry(req.params.id, req.user);
+
+  const message = result?.deletedPermanently
+    ? "Inquiry removed permanently"
+    : "Inquiry removed from your view";
+
+  return successResponse(res, null, message, 200);
 });
 
 const clearResponse = catchAsync(async (req, res) => {

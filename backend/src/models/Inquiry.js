@@ -53,6 +53,16 @@ const inquirySchema = new mongoose.Schema(
     respondedAt: {
       type: Date,
       default: null
+    },
+    senderSoftDeleted: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+    agentSoftDeleted: {
+      type: Boolean,
+      default: false,
+      index: true
     }
   },
   {

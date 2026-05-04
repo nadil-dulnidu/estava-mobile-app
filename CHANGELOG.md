@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- User profile management on mobile and backend, including top-right avatar entry from home, editable name/password/phone fields, avatar upload, and inquiry phone autofill from profile.
 - Expanded CRUD flows across properties, inquiries, appointments, and reviews.
 - Added owner listing status and deletion controls for properties.
 - Added delisted listing behavior to property feed handling.

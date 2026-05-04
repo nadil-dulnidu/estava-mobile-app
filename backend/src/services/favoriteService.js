@@ -28,7 +28,7 @@ const listFavoritesByUser = async (userId) => {
   return Favorite.find({ userId })
     .populate({
       path: "propertyId",
-      select: "title location price propertyType listingStatus imageUrls"
+      select: "title location price propertyType listingStatus imageUrls bedrooms bathrooms"
     })
     .sort({ createdAt: -1 });
 };
